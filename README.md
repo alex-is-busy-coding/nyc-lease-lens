@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/nyc_lease_lens_logo.jpeg" alt="NYC Lease Lens logo" width="480">
+</p>
+
 # NYC Lease Lens
 
 An AI agent that checks any NYC apartment for red flags before you sign the lease.
