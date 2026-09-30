@@ -7,11 +7,11 @@ from typing import Any
 
 import requests
 
+from nyc_lease_lens import datasets
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-HPD_VIOLATIONS = "wvxf-dwi5"
 MAX_ROWS = 5000
 CLASSES = ["C", "B", "A", "I"]
 
@@ -33,6 +33,7 @@ class GetHpdViolations(Tool):
     """Summarize a building's HPD housing code violations by class, status and type."""
 
     name = "get_hpd_violations"
+    data_sources = (datasets.HPD_VIOLATIONS,)
     description = (
         "Summarize HPD housing code violations for a building, by severity class and type "
         "(pests, mold, heat/hot water, lead paint, fire safety, illegal occupancy, ...). "
@@ -132,7 +133,7 @@ class GetHpdViolations(Tool):
 
     def _query(self, params: dict) -> list[dict]:
         try:
-            return self.client.socrata(HPD_VIOLATIONS, params)
+            return self.client.socrata(datasets.HPD_VIOLATIONS.id, params)
         except requests.RequestException as e:
             raise ToolError(f"HPD violations lookup failed: {e}") from e
 

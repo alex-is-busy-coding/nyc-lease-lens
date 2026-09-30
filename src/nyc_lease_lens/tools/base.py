@@ -4,6 +4,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nyc_lease_lens.datasets import Dataset
 from nyc_lease_lens.log import ms_since
 from nyc_lease_lens.opendata import OpenDataClient
 
@@ -18,6 +19,7 @@ class Tool(ABC):
     name: str
     description: str
     parameters: dict
+    data_sources: tuple[Dataset, ...] = ()  # what the tool reads; the README data table uses this
 
     def __init__(self, client: OpenDataClient):
         self.client = client

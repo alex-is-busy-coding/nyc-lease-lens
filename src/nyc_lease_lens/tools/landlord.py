@@ -5,16 +5,12 @@ from typing import Any
 
 import requests
 
+from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
-from nyc_lease_lens.tools.building import HPD_BUILDINGS
-from nyc_lease_lens.tools.violations import HPD_VIOLATIONS
 
 logger = logging.getLogger(__name__)
 
-HPD_REGISTRATIONS = "tesw-yqqr"
-HPD_CONTACTS = "feu5-w2e2"
-AEP = "hcir-3275"
 CHUNK = 300
 MAX_REGISTRATIONS = 3000
 
@@ -23,6 +19,13 @@ class GetLandlordProfile(Tool):
     """Identify who owns and manages a building, and how their other buildings are kept."""
 
     name = "get_landlord_profile"
+    data_sources = (
+        datasets.HPD_REGISTRATIONS,
+        datasets.HPD_CONTACTS,
+        datasets.HPD_BUILDINGS,
+        datasets.HPD_VIOLATIONS,
+        datasets.AEP,
+    )
     description = (
         "Identify the building's registered owner, head officer and managing agent from HPD "
         "registrations, and summarize their portfolios: how many buildings and apartments they "
@@ -44,7 +47,7 @@ class GetLandlordProfile(Tool):
             raise ToolError(f"'{bin}' is not a 7-digit BIN. Call lookup_building first.")
 
         registrations = self._query(
-            HPD_REGISTRATIONS,
+            datasets.HPD_REGISTRATIONS.id,
             {"$where": f"bin='{bin}'", "$order": "lastregistrationdate DESC", "$limit": 1},
         )
         if not registrations:
@@ -59,7 +62,9 @@ class GetLandlordProfile(Tool):
             }
 
         registration = registrations[0]
-        contacts = self._query(HPD_CONTACTS, {"$where": f"registrationid='{registration['registrationid']}'"})
+        contacts = self._query(
+            datasets.HPD_CONTACTS.id, {"$where": f"registrationid='{registration['registrationid']}'"}
+        )
         people = _key_contacts(contacts)
         result: dict[str, Any] = {"bin": bin, "registration": _registration_status(registration, self._data_as_of())}
         result |= {k: v["label"] for k, v in people.items()}
@@ -106,12 +111,12 @@ class GetLandlordProfile(Tool):
 
     def _portfolio(self, where: str) -> tuple[set[str], list[dict]]:
         rows = self._query(
-            HPD_CONTACTS,
+            datasets.HPD_CONTACTS.id,
             {"$select": "distinct registrationid", "$where": where, "$limit": MAX_REGISTRATIONS},
         )
         ids = {r["registrationid"] for r in rows}
         registrations = self._chunked(
-            HPD_REGISTRATIONS,
+            datasets.HPD_REGISTRATIONS.id,
             "registrationid",
             sorted(ids),
             {"$select": "buildingid, housenumber, streetname, boro"},
@@ -124,14 +129,14 @@ class GetLandlordProfile(Tool):
         with ContextThreadPoolExecutor() as pool:
             units_future = pool.submit(
                 self._chunked,
-                HPD_BUILDINGS,
+                datasets.HPD_BUILDINGS.id,
                 "buildingid",
                 ids,
                 {"$select": "buildingid, legalclassa", "$where": "recordstatus='Active'"},
             )
             violations_future = pool.submit(
                 self._chunked,
-                HPD_VIOLATIONS,
+                datasets.HPD_VIOLATIONS.id,
                 "buildingid",
                 ids,
                 {
@@ -140,7 +145,9 @@ class GetLandlordProfile(Tool):
                     "$group": "buildingid",
                 },
             )
-            aep_future = pool.submit(self._chunked, AEP, "building_id", ids, {"$select": "building_id, current_status"})
+            aep_future = pool.submit(
+                self._chunked, datasets.AEP.id, "building_id", ids, {"$select": "building_id, current_status"}
+            )
             units = {r["buildingid"]: int(r.get("legalclassa") or 0) for r in units_future.result()}
             open_c = {r["buildingid"]: int(r["n"]) for r in violations_future.result()}
             aep = [r for r in aep_future.result() if "active" in r.get("current_status", "").lower()]
@@ -167,11 +174,11 @@ class GetLandlordProfile(Tool):
         if GetLandlordProfile._citywide_rate is None:
             try:
                 violations = self.client.socrata(
-                    HPD_VIOLATIONS,
+                    datasets.HPD_VIOLATIONS.id,
                     {"$select": "count(*) AS n", "$where": "violationstatus='Open' AND class='C'"},
                 )
                 units = self.client.socrata(
-                    HPD_BUILDINGS, {"$select": "sum(legalclassa) AS n", "$where": "recordstatus='Active'"}
+                    datasets.HPD_BUILDINGS.id, {"$select": "sum(legalclassa) AS n", "$where": "recordstatus='Active'"}
                 )
                 GetLandlordProfile._citywide_rate = 100 * int(violations[0]["n"]) / float(units[0]["n"])
                 logger.info(
@@ -186,7 +193,9 @@ class GetLandlordProfile(Tool):
         """Newest registration date in the dataset. Renewals show up weeks late."""
         if GetLandlordProfile._registrations_as_of is None:
             try:
-                rows = self.client.socrata(HPD_REGISTRATIONS, {"$select": "max(lastregistrationdate) AS latest"})
+                rows = self.client.socrata(
+                    datasets.HPD_REGISTRATIONS.id, {"$select": "max(lastregistrationdate) AS latest"}
+                )
                 GetLandlordProfile._registrations_as_of = rows[0]["latest"][:10]
                 logger.info("registration data date cached", extra={"as_of": GetLandlordProfile._registrations_as_of})
             except (requests.RequestException, KeyError, IndexError) as e:

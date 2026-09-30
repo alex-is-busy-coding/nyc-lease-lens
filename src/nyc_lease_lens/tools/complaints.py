@@ -7,13 +7,13 @@ from typing import Any
 
 import requests
 
+from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
-from nyc_lease_lens.tools.building import PLUTO, hpd_units_on_lots, lot_aliases
+from nyc_lease_lens.tools.building import hpd_units_on_lots, lot_aliases
 
 logger = logging.getLogger(__name__)
 
-SERVICE_REQUESTS = "erm2-nwe9"
 CATEGORIES = ["heat_hot_water", "pests", "mold", "leaks_plumbing", "noise", "sanitation", "repairs"]
 REPAIR_TYPES = {
     "PAINT/PLASTER",
@@ -34,6 +34,7 @@ class Get311Complaints(Tool):
     """Summarize 311 complaints at a building and compare it with nearby buildings."""
 
     name = "get_311_complaints"
+    data_sources = (datasets.SERVICE_REQUESTS, datasets.PLUTO, datasets.HPD_BUILDINGS, datasets.HPD_VIOLATIONS)
     description = (
         "Summarize 311 complaints about a building (heat/hot water, pests, mold, leaks, noise, "
         "sanitation, repairs) and compare it with nearby buildings per apartment, as a "
@@ -144,7 +145,7 @@ class Get311Complaints(Tool):
 
     def _counts_by_bbl(self, where: str, since: str) -> dict[str, Counter]:
         rows = self._query(
-            SERVICE_REQUESTS,
+            datasets.SERVICE_REQUESTS.id,
             {
                 "$select": "bbl, complaint_type, descriptor, count(*) AS n",
                 "$where": f"{where} AND created_date >= '{since}'",
@@ -159,7 +160,7 @@ class Get311Complaints(Tool):
 
     def _heat_days(self, ids: str) -> list[dict]:
         return self._query(
-            SERVICE_REQUESTS,
+            datasets.SERVICE_REQUESTS.id,
             {
                 "$select": "date_trunc_ymd(created_date) AS day, count(*) AS n",
                 "$where": f"bbl in ({ids}) AND complaint_type='HEAT/HOT WATER' "
@@ -171,7 +172,9 @@ class Get311Complaints(Tool):
 
     def _residential_units(self, bbls: list[str]) -> dict[str, int]:
         ids = ",".join(bbls)  # PLUTO stores bbl as a number
-        rows = self._query(PLUTO, {"$select": "bbl, unitsres", "$where": f"bbl in ({ids})", "$limit": len(bbls)})
+        rows = self._query(
+            datasets.PLUTO.id, {"$select": "bbl, unitsres", "$where": f"bbl in ({ids})", "$limit": len(bbls)}
+        )
         return {str(int(float(r["bbl"]))): int(float(r.get("unitsres") or 0)) for r in rows}
 
     def _query(self, dataset: str, params: dict) -> list[dict]:

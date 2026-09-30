@@ -6,16 +6,13 @@ from typing import Any
 
 import requests
 
+from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import lot_aliases
 
 logger = logging.getLogger(__name__)
 
-EVICTIONS = "6z8x-wfk4"
-BEDBUGS = "wz6d-d3jb"
-LITIGATIONS = "59kj-x8nc"
-VACATE_ORDERS = "tb8q-a3ar"
 
 HARASSMENT_FOUND = ("After Trial", "After Inquest")
 CASE_KINDS = {
@@ -39,6 +36,13 @@ class GetTenantHistory(Tool):
     """Evictions, bedbug reports, housing court cases and vacate orders for a building."""
 
     name = "get_tenant_history"
+    data_sources = (
+        datasets.EVICTIONS,
+        datasets.BEDBUGS,
+        datasets.LITIGATIONS,
+        datasets.VACATE_ORDERS,
+        datasets.HPD_VIOLATIONS,
+    )
     description = (
         "Summarize what has happened to tenants in a building: executed residential evictions by "
         "year, the owner's annual bedbug reports, HPD housing court cases (tenant repair actions, "
@@ -116,7 +120,7 @@ class GetTenantHistory(Tool):
 
     def _evictions(self, lots: str, since: str) -> dict[str, Any]:
         rows = self._query(
-            EVICTIONS,
+            datasets.EVICTIONS.id,
             {
                 "$select": "date_extract_y(executed_date) AS year, count(*) AS n",
                 "$where": f"{lots} AND residential_commercial_ind='Residential' AND executed_date >= '{since}'",
@@ -129,7 +133,7 @@ class GetTenantHistory(Tool):
 
     def _bedbugs(self, lots: str) -> list[dict[str, Any]]:
         rows = self._query(
-            BEDBUGS,
+            datasets.BEDBUGS.id,
             {
                 "$select": "building_id, filing_date, filing_period_start_date, filling_period_end_date, "
                 "of_dwelling_units, infested_dwelling_unit_count, eradicated_unit_count, re_infested_dwelling_unit",
@@ -163,7 +167,7 @@ class GetTenantHistory(Tool):
     def _court(self, lots: str, since: str) -> dict[str, Any]:
         found = ",".join(repr(f) for f in HARASSMENT_FOUND)
         rows = self._query(
-            LITIGATIONS,
+            datasets.LITIGATIONS.id,
             {
                 "$select": "casetype, casestatus, caseopendate, findingofharassment, findingdate, penalty",
                 "$where": f"{lots} AND (caseopendate >= '{since}' OR casetype='7A' "
@@ -196,7 +200,7 @@ class GetTenantHistory(Tool):
 
     def _vacates(self, lots: str, since: str) -> dict[str, Any]:
         rows = self._query(
-            VACATE_ORDERS,
+            datasets.VACATE_ORDERS.id,
             {
                 "$select": "house_number, street_name, primary_vacate_reason, vacate_type, "
                 "vacate_effective_date, actual_rescind_date, number_of_vacated_units",

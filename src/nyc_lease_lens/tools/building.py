@@ -4,14 +4,12 @@ from typing import Any
 
 import requests
 
+from nyc_lease_lens import datasets
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
-from nyc_lease_lens.tools.violations import HPD_VIOLATIONS
 
 logger = logging.getLogger(__name__)
 
-PLUTO = "64uk-42ks"
-HPD_BUILDINGS = "kj4p-ruqc"
 BOROUGHS = ["Manhattan", "Bronx", "Brooklyn", "Queens", "Staten Island"]
 
 
@@ -19,6 +17,7 @@ class LookupBuilding(Tool):
     """Resolve an NYC address to its BBL/BIN and basic building facts."""
 
     name = "lookup_building"
+    data_sources = (datasets.GEOSEARCH, datasets.PLUTO, datasets.HPD_BUILDINGS)
     description = (
         "Identify an NYC building from a street address. Returns its BBL (tax lot ID) and BIN "
         "(building ID), coordinates, and facts such as year built and number of apartments. "
@@ -88,7 +87,7 @@ class LookupBuilding(Tool):
     def _building_facts(self, bbl: str, bin: str | None) -> tuple[dict | None, list[str]]:
         notes = []
         try:
-            rows = self.client.socrata(PLUTO, {"$where": f"bbl={bbl}"})
+            rows = self.client.socrata(datasets.PLUTO.id, {"$where": f"bbl={bbl}"})
         except requests.RequestException as e:
             rows = []
             notes.append(f"PLUTO lookup failed ({e}).")
@@ -142,14 +141,17 @@ class LookupBuilding(Tool):
 
 def hpd_apartments(client: OpenDataClient, bin: str) -> int | None:
     """Legal apartment count for one building from HPD's register. BINs survive lot renumbering."""
-    rows = client.socrata(HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"bin='{bin}' AND recordstatus='Active'"})
+    rows = client.socrata(
+        datasets.HPD_BUILDINGS.id, {"$select": "legalclassa", "$where": f"bin='{bin}' AND recordstatus='Active'"}
+    )
     return sum(_int(r.get("legalclassa")) or 0 for r in rows) or None
 
 
 def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
     """The BBL plus any older numbers for the same lot. HPD keeps the old block/lot on violations."""
     rows = client.socrata(
-        HPD_VIOLATIONS, {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"}
+        datasets.HPD_VIOLATIONS.id,
+        {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"},
     )
     aliases = {bbl}
     for r in rows:
@@ -161,7 +163,8 @@ def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
 def hpd_units_on_lots(client: OpenDataClient, bbls: list[str]) -> int:
     lots = " OR ".join(f"(boroid='{b[0]}' AND block='{int(b[1:6])}' AND lot='{int(b[6:])}')" for b in bbls)
     rows = client.socrata(
-        HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000}
+        datasets.HPD_BUILDINGS.id,
+        {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000},
     )
     return sum(_int(r.get("legalclassa")) or 0 for r in rows)
 
