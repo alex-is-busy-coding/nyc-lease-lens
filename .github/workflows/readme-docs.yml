@@ -6,6 +6,7 @@ on:
     paths:
       - "makefile"
       - "src/nyc_lease_lens/tools/**"
+      - "src/nyc_lease_lens/scoring.py"
       - "scripts/update_readme.py"
       - "README.md"
   workflow_dispatch:

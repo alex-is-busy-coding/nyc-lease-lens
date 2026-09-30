@@ -20,6 +20,58 @@ make dev     # start with auto-reload at http://127.0.0.1:8000
 Config lives in `.env` (copied from `.env.example`, gitignored).
 Override any value per call, e.g. `make dev PORT=9000`.
 
+## How it works
+
+Give the agent an address and it makes one call to `score_building_risk`. That tool identifies the building, runs every check against NYC Open Data at the same time, and passes the results to `scoring.py`, which turns them into a grade. The agent then explains the grade, and can call any check on its own for follow-up questions.
+
+The diagram is generated from the code; `make docs` refreshes it.
+
+<!-- flow:start -->
+```mermaid
+flowchart TD
+    user(["Renter asks about an address"]) --> agent["Agent (LLM)"]
+    agent -->|"one tool call"| risk["score_building_risk"]
+    risk --> lookup["lookup_building<br/>address → BBL, BIN, location"]
+    lookup -.->|"ambiguous address: ask for the borough"| agent
+    lookup --> parallel{{"run checks in parallel"}}
+    parallel --> violations["get_hpd_violations"]
+    parallel --> complaints["get_311_complaints"]
+    parallel --> landlord["get_landlord_profile"]
+    parallel --> history["get_tenant_history"]
+    violations & complaints & landlord & history --> scoring
+    scoring["scoring.py<br/>points → 0-100 score → grade A-F"]
+    scoring --> report["grade, score, red flags, good signs, data gaps"]
+    report --> agent
+    agent --> answer(["Answer: grade, then red flags by weight"])
+    agent -.->|"follow-up questions"| violations
+    agent -.-> complaints
+    agent -.-> landlord
+    agent -.-> history
+```
+<!-- flow:end -->
+
+### How the grade works
+
+Each red flag adds points, and the total is capped at 100:
+
+- **Severity first.** Signs that tenants are forced out or mistreated weigh the most: vacate orders, harassment findings and court-appointed administrators. Hazardous (class C) and rent-impairing violations come next.
+- **Per apartment.** Violations and evictions are counted per 100 apartments, so a big building isn't penalized for its size. Small counts are capped, so one old violation in a small building can't outweigh hundreds in a large one.
+- **Compared with neighbors and the city.** 311 complaints are ranked against nearby buildings, and the landlord's portfolio against the citywide violation rate.
+- **Recent over old.** Harassment findings and court-appointed administrators count for less after ten years.
+- **Good signs and gaps.** Clean results are listed as good signs. If a check fails, the report says so, because a missing check can only make the score look better than it is.
+
+<!-- grades:start -->
+| Grade | Score |
+| --- | --- |
+| A | 0–9 |
+| B | 10–24 |
+| C | 25–44 |
+| D | 45–69 |
+| F | 70–100 |
+<!-- grades:end -->
+
+The exact weights are in [src/nyc_lease_lens/scoring.py](src/nyc_lease_lens/scoring.py).
+
 ## Make targets
 
 Run `make help` prints the same list.

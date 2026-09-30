@@ -1,6 +1,6 @@
-"""Regenerate the generated tables in README.md (make targets, agent tools).
+"""Regenerate the generated sections of README.md (agent flow, grades, make targets, tools).
 
-Each table lives between <!-- NAME:start --> and <!-- NAME:end --> markers.
+Each section lives between <!-- NAME:start --> and <!-- NAME:end --> markers.
 Usage: uv run python scripts/update_readme.py [--check]
 """
 
@@ -13,8 +13,10 @@ import sys
 from pathlib import Path
 
 import nyc_lease_lens.tools as tools_package
+from nyc_lease_lens import scoring
 from nyc_lease_lens.tools import TOOL_CLASSES
 from nyc_lease_lens.tools.base import Tool
+from nyc_lease_lens.tools.risk import ScoreBuildingRisk
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
@@ -47,7 +49,41 @@ def tools_table() -> str:
     return "\n".join(lines)
 
 
-SECTIONS = {"make": make_targets_table, "tools": tools_table}
+def flow_diagram() -> str:
+    """Mermaid flowchart of one address check, built from ScoreBuildingRisk's lookup and checks."""
+    risk = ScoreBuildingRisk
+    lines = [
+        "```mermaid",
+        "flowchart TD",
+        '    user(["Renter asks about an address"]) --> agent["Agent (LLM)"]',
+        f'    agent -->|"one tool call"| risk["{risk.name}"]',
+        f'    risk --> lookup["{risk.lookup_tool.name}<br/>address → BBL, BIN, location"]',
+        '    lookup -.->|"ambiguous address: ask for the borough"| agent',
+        '    lookup --> parallel{{"run checks in parallel"}}',
+    ]
+    for key, (tool, _) in risk.checks.items():
+        lines.append(f'    parallel --> {key}["{tool.name}"]')
+    lines.append(f"    {' & '.join(risk.checks)} --> scoring")
+    lines += [
+        '    scoring["scoring.py<br/>points → 0-100 score → grade A-F"]',
+        '    scoring --> report["grade, score, red flags, good signs, data gaps"]',
+        "    report --> agent",
+        '    agent --> answer(["Answer: grade, then red flags by weight"])',
+    ]
+    for i, key in enumerate(risk.checks):
+        label = '|"follow-up questions"|' if i == 0 else ""
+        lines.append(f"    agent -.->{label} {key}")
+    lines.append("```")
+    return "\n".join(lines)
+
+
+def grades_table() -> str:
+    lines = ["| Grade | Score |", "| --- | --- |"]
+    lines += [f"| {grade} | {low}–{high} |" for grade, low, high in scoring.grade_bands()]
+    return "\n".join(lines)
+
+
+SECTIONS = {"flow": flow_diagram, "grades": grades_table, "make": make_targets_table, "tools": tools_table}
 
 
 def _discover_tools() -> list[type[Tool]]:
