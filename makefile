@@ -6,7 +6,7 @@ endif
 UV_RUN := uv run
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install login gcp-setup auth-check run dev clean require-gcloud
+.PHONY: help setup env install login gcp-setup auth-check run dev docs clean require-gcloud
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -41,6 +41,9 @@ run: .env auth-check ## Start the app
 
 dev: .env auth-check ## Start the app with auto-reload
 	RELOAD=true $(UV_RUN) python -m nyc_lease_lens
+
+docs: ## Regenerate the tools table in README.md
+	$(UV_RUN) python scripts/update_readme_tools.py
 
 clean: ## Remove the virtualenv and caches
 	rm -rf .venv
