@@ -3,18 +3,26 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from statistics import median
+from typing import Any
 
 import requests
 
-from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import PLUTO, hpd_units_on_lots, lot_aliases
 
 SERVICE_REQUESTS = "erm2-nwe9"
 CATEGORIES = ["heat_hot_water", "pests", "mold", "leaks_plumbing", "noise", "sanitation", "repairs"]
 REPAIR_TYPES = {
-    "PAINT/PLASTER", "DOOR/WINDOW", "FLOORING/STAIRS", "APPLIANCE", "ELECTRIC", "GENERAL",
-    "SAFETY", "OUTSIDE BUILDING", "ELEVATOR", "GENERAL CONSTRUCTION/PLUMBING",
+    "PAINT/PLASTER",
+    "DOOR/WINDOW",
+    "FLOORING/STAIRS",
+    "APPLIANCE",
+    "ELECTRIC",
+    "GENERAL",
+    "SAFETY",
+    "OUTSIDE BUILDING",
+    "ELEVATOR",
+    "GENERAL CONSTRUCTION/PLUMBING",
 }
 HEAT_SEASONS = 3
 
@@ -58,9 +66,6 @@ class Get311Complaints(Tool):
         "required": ["bbl"],
     }
 
-    def __init__(self, client: OpenDataClient):
-        self.client = client
-
     def run(
         self,
         bbl: str,
@@ -69,7 +74,7 @@ class Get311Complaints(Tool):
         categories: list[str] | None = None,
         radius_m: int = 150,
         months: int = 24,
-    ) -> dict:
+    ) -> dict[str, Any]:
         if not re.fullmatch(r"\d{10}", bbl):
             raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
         wanted = [c for c in categories or CATEGORIES if c in CATEGORIES] or CATEGORIES
@@ -82,22 +87,25 @@ class Get311Complaints(Tool):
         aliases = self._call(lot_aliases, self.client, bbl)
         ids = ",".join(f"'{b}'" for b in aliases)
         with ThreadPoolExecutor() as pool:
-            building = pool.submit(self._counts_by_bbl, f"bbl in ({ids})", since)
-            heat = pool.submit(self._heat_days, ids)
-            nearby = pool.submit(
-                self._counts_by_bbl,
-                f"within_circle(location, {float(latitude)}, {float(longitude)}, {radius_m}) "
-                f"AND bbl not in ({ids}) AND bbl IS NOT NULL",
-                since,
-            ) if compare else None
-            building, heat = building.result(), heat.result()
-            nearby = nearby.result() if nearby else {}
+            building_future = pool.submit(self._counts_by_bbl, f"bbl in ({ids})", since)
+            heat_future = pool.submit(self._heat_days, ids)
+            nearby_future = None
+            if latitude is not None and longitude is not None:
+                nearby_future = pool.submit(
+                    self._counts_by_bbl,
+                    f"within_circle(location, {float(latitude)}, {float(longitude)}, {radius_m}) "
+                    f"AND bbl not in ({ids}) AND bbl IS NOT NULL",
+                    since,
+                )
+            building, heat = building_future.result(), heat_future.result()
+            nearby = nearby_future.result() if nearby_future else {}
 
-        counts = sum(building.values(), Counter())
-        result = {"bbl": bbl, "counting_since": since}
-        notes = []
+        counts: Counter[str] = sum(building.values(), Counter())
+        result: dict[str, Any] = {"bbl": bbl, "counting_since": since}
+        notes: list[str] = []
         if len(aliases) > 1:
-            notes.append(f"This lot was renumbered; complaints filed under {', '.join(a for a in aliases if a != bbl)} are included.")
+            old = ", ".join(a for a in aliases if a != bbl)
+            notes.append(f"This lot was renumbered; complaints filed under {old} are included.")
 
         if nearby:
             units = self._residential_units([*aliases, *nearby])
@@ -126,25 +134,31 @@ class Get311Complaints(Tool):
         return result
 
     def _counts_by_bbl(self, where: str, since: str) -> dict[str, Counter]:
-        rows = self._query(SERVICE_REQUESTS, {
-            "$select": "bbl, complaint_type, descriptor, count(*) AS n",
-            "$where": f"{where} AND created_date >= '{since}'",
-            "$group": "bbl, complaint_type, descriptor",
-            "$limit": 50000,
-        })
+        rows = self._query(
+            SERVICE_REQUESTS,
+            {
+                "$select": "bbl, complaint_type, descriptor, count(*) AS n",
+                "$where": f"{where} AND created_date >= '{since}'",
+                "$group": "bbl, complaint_type, descriptor",
+                "$limit": 50000,
+            },
+        )
         counts: dict[str, Counter] = defaultdict(Counter)
         for row in rows:
             counts[row["bbl"]][_categorize(row["complaint_type"], row.get("descriptor"))] += int(row["n"])
         return counts
 
     def _heat_days(self, ids: str) -> list[dict]:
-        return self._query(SERVICE_REQUESTS, {
-            "$select": "date_trunc_ymd(created_date) AS day, count(*) AS n",
-            "$where": f"bbl in ({ids}) AND complaint_type='HEAT/HOT WATER' "
-                      f"AND created_date >= '{_season_start(HEAT_SEASONS - 1).isoformat()}'",
-            "$group": "day",
-            "$limit": 5000,
-        })
+        return self._query(
+            SERVICE_REQUESTS,
+            {
+                "$select": "date_trunc_ymd(created_date) AS day, count(*) AS n",
+                "$where": f"bbl in ({ids}) AND complaint_type='HEAT/HOT WATER' "
+                f"AND created_date >= '{_season_start(HEAT_SEASONS - 1).isoformat()}'",
+                "$group": "day",
+                "$limit": 5000,
+            },
+        )
 
     def _residential_units(self, bbls: list[str]) -> dict[str, int]:
         ids = ",".join(bbls)  # PLUTO stores bbl as a number
@@ -204,10 +218,14 @@ def _season_start(seasons_ago: int = 0) -> date:
 
 
 def _heat_seasons(days: list[dict]) -> list[dict]:
-    seasons = {}
+    seasons: dict[int, dict[str, Any]] = {}
     for i in reversed(range(HEAT_SEASONS)):
         start = _season_start(i)
-        seasons[start.year] = {"season": f"{start.year}-{(start.year + 1) % 100:02d}", "complaints": 0, "days_with_complaints": 0}
+        seasons[start.year] = {
+            "season": f"{start.year}-{(start.year + 1) % 100:02d}",
+            "complaints": 0,
+            "days_with_complaints": 0,
+        }
     for row in days:
         day = date.fromisoformat(row["day"][:10])
         if 6 <= day.month <= 9:

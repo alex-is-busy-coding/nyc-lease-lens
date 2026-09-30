@@ -1,10 +1,11 @@
 import re
 from collections import Counter
+from collections.abc import Iterable
 from datetime import date, timedelta
+from typing import Any
 
 import requests
 
-from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 HPD_VIOLATIONS = "wvxf-dwi5"
@@ -51,41 +52,49 @@ class GetHpdViolations(Tool):
         "required": ["bbl"],
     }
 
-    def __init__(self, client: OpenDataClient):
-        self.client = client
-
-    def run(self, bbl: str, months: int = 36) -> dict:
+    def run(self, bbl: str, months: int = 36) -> dict[str, Any]:
         if not re.fullmatch(r"\d{10}", bbl):
             raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
         months = max(1, min(int(months), 120))
         since = date.today() - timedelta(days=round(months * 30.44))
 
         where = f"bbl='{bbl}' AND (inspectiondate >= '{since.isoformat()}' OR violationstatus='Open')"
-        groups = self._query({
-            "$select": f"class, violationstatus, rentimpairing, "
-                       f"case(inspectiondate >= '{since.isoformat()}', 'recent', true, 'older') AS period, "
-                       f"count(*) AS n",
-            "$where": where,
-            "$group": "class, violationstatus, rentimpairing, period",
-        })
-        result = {"bbl": bbl, "counting_since": since.isoformat()}
+        groups = self._query(
+            {
+                "$select": f"class, violationstatus, rentimpairing, "
+                f"case(inspectiondate >= '{since.isoformat()}', 'recent', true, 'older') AS period, "
+                f"count(*) AS n",
+                "$where": where,
+                "$group": "class, violationstatus, rentimpairing, period",
+            }
+        )
+        result: dict[str, Any] = {"bbl": bbl, "counting_since": since.isoformat()}
         if not groups:
             result["notes"] = ["No open HPD violations, and none issued in this period."]
             return result
 
-        notes = []
-        rows = self._optional_query(notes, "categories and examples", {
-            "$select": "class, violationstatus, inspectiondate, novdescription, apartment, housenumber, streetname",
-            "$where": where,
-            "$order": "inspectiondate DESC",
-            "$limit": MAX_ROWS,
-        })
-        oldest = self._optional_query(notes, "the oldest open violation", {
-            "$select": "class, violationstatus, inspectiondate, novdescription, apartment",
-            "$where": f"bbl='{bbl}' AND violationstatus='Open' AND class in ('B', 'C') AND inspectiondate IS NOT NULL",
-            "$order": "inspectiondate ASC",
-            "$limit": 1,
-        })
+        notes: list[str] = []
+        rows = self._optional_query(
+            notes,
+            "categories and examples",
+            {
+                "$select": "class, violationstatus, inspectiondate, novdescription, apartment, housenumber, streetname",
+                "$where": where,
+                "$order": "inspectiondate DESC",
+                "$limit": MAX_ROWS,
+            },
+        )
+        oldest = self._optional_query(
+            notes,
+            "the oldest open violation",
+            {
+                "$select": "class, violationstatus, inspectiondate, novdescription, apartment",
+                "$where": f"bbl='{bbl}' AND violationstatus='Open' AND class in ('B', 'C') "
+                "AND inspectiondate IS NOT NULL",
+                "$order": "inspectiondate ASC",
+                "$limit": 1,
+            },
+        )
         for row in rows + oldest:
             row["inspectiondate"] = row.get("inspectiondate", "")
             row["_open"] = row.get("violationstatus") == "Open"
@@ -109,9 +118,7 @@ class GetHpdViolations(Tool):
             result["addresses_on_lot"] = addresses[:10]
             notes.append(f"This tax lot has {len(addresses)} addresses; counts cover all of them.")
         if len(rows) >= MAX_ROWS:
-            notes.append(
-                f"Class counts are exact; categories are based on the {MAX_ROWS} most recent violations only."
-            )
+            notes.append(f"Class counts are exact; categories are based on the {MAX_ROWS} most recent violations only.")
         if notes:
             result["notes"] = notes
         return result
@@ -138,10 +145,10 @@ def _categorize(description: str) -> str:
     return "other_repairs"
 
 
-def _sum_by_class(groups) -> dict:
-    counts = Counter()
+def _sum_by_class(groups: Iterable[dict]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
     for g in groups:
-        counts[g.get("class")] += int(g["n"])
+        counts[g.get("class", "")] += int(g["n"])
     return {"total": counts.total()} | {c: counts[c] for c in CLASSES if counts[c]}
 
 

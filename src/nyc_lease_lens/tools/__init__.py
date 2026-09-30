@@ -4,9 +4,11 @@ from nyc_lease_lens.tools.building import LookupBuilding
 from nyc_lease_lens.tools.complaints import Get311Complaints
 from nyc_lease_lens.tools.violations import GetHpdViolations
 
-__all__ = ["Tool", "ToolError", "ToolRegistry", "build_registry"]
+__all__ = ["TOOL_CLASSES", "Tool", "ToolError", "ToolRegistry", "build_registry"]
+
+# To add a tool: write a Tool subclass in its own module and list it here.
+TOOL_CLASSES: list[type[Tool]] = [LookupBuilding, GetHpdViolations, Get311Complaints]
 
 
 def build_registry(client: OpenDataClient) -> ToolRegistry:
-    """To add a tool: write a Tool subclass in its own module and list it here."""
-    return ToolRegistry([LookupBuilding(client), GetHpdViolations(client), Get311Complaints(client)])
+    return ToolRegistry([cls(client) for cls in TOOL_CLASSES])

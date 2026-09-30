@@ -6,7 +6,7 @@ endif
 UV_RUN := uv run
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install login gcp-setup auth-check run dev docs clean require-gcloud
+.PHONY: help setup env install login gcp-setup auth-check run dev lint format typecheck check docs clean require-gcloud
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -20,8 +20,9 @@ env: ## Create .env from .env.example
 	@cp .env.example .env
 	@echo "Created .env from .env.example"
 
-install: .env ## Install dependencies from uv.lock
+install: .env ## Install dependencies from uv.lock and the git pre-commit hooks
 	uv sync
+	$(UV_RUN) pre-commit install
 
 login: require-gcloud ## Log in to Google Cloud and point ADC at the project
 	gcloud auth application-default login
@@ -41,6 +42,20 @@ run: .env auth-check ## Start the app
 
 dev: .env auth-check ## Start the app with auto-reload
 	RELOAD=true $(UV_RUN) python -m nyc_lease_lens
+
+lint: ## Lint and check formatting with ruff
+	$(UV_RUN) ruff check .
+	$(UV_RUN) ruff format --check .
+
+format: ## Auto-format and fix lint issues with ruff
+	$(UV_RUN) ruff format .
+	$(UV_RUN) ruff check --fix .
+
+typecheck: ## Type-check with mypy
+	$(UV_RUN) mypy
+
+check: ## Run every pre-commit hook on all files
+	$(UV_RUN) pre-commit run --all-files
 
 docs: ## Regenerate the make targets and tools tables in README.md
 	$(UV_RUN) python scripts/update_readme.py

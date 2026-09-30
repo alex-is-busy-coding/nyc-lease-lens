@@ -40,16 +40,20 @@ class Agent:
 
         Returns the final text and a record of every tool call made along the way.
         """
-        tool_calls = []
+        tool_calls: list[dict] = []
 
         for _ in range(self.max_tool_rounds):
-            reply = litellm.completion(
-                model=self.model,
-                vertex_project=self.vertex_project,
-                vertex_location=self.vertex_location,
-                messages=messages,
-                tools=self.tools.schemas,
-            ).choices[0].message
+            reply = (
+                litellm.completion(
+                    model=self.model,
+                    vertex_project=self.vertex_project,
+                    vertex_location=self.vertex_location,
+                    messages=messages,
+                    tools=self.tools.schemas,
+                )
+                .choices[0]
+                .message
+            )
 
             messages += [reply.model_dump()]
 

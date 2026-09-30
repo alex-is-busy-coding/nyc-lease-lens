@@ -1,5 +1,8 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Any
+
+from nyc_lease_lens.opendata import OpenDataClient
 
 
 class ToolError(Exception):
@@ -11,6 +14,9 @@ class Tool(ABC):
     description: str
     parameters: dict
 
+    def __init__(self, client: OpenDataClient):
+        self.client = client
+
     @property
     def schema(self) -> dict:
         """What the model sees."""
@@ -20,7 +26,7 @@ class Tool(ABC):
         }
 
     @abstractmethod
-    def run(self, **kwargs) -> dict: ...
+    def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]: ...
 
 
 class ToolRegistry:

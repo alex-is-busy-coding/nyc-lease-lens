@@ -28,12 +28,16 @@ Run `make help` prints the same list.
 | `make help` | Show this help | — |
 | `make setup` | First-time setup: .env, deps, gcloud login, enable Vertex AI | `env`, `install`, `login`, `gcp-setup` |
 | `make env` | Create .env from .env.example | — |
-| `make install` | Install dependencies from uv.lock | `.env` |
+| `make install` | Install dependencies from uv.lock and the git pre-commit hooks | `.env` |
 | `make login` | Log in to Google Cloud and point ADC at the project | `require-gcloud` |
 | `make gcp-setup` | Enable the Vertex AI API on the project | `require-gcloud` |
 | `make auth-check` | Verify credentials work before starting the app | `require-gcloud` |
 | `make run` | Start the app | `.env`, `auth-check` |
 | `make dev` | Start the app with auto-reload | `.env`, `auth-check` |
+| `make lint` | Lint and check formatting with ruff | — |
+| `make format` | Auto-format and fix lint issues with ruff | — |
+| `make typecheck` | Type-check with mypy | — |
+| `make check` | Run every pre-commit hook on all files | — |
 | `make docs` | Regenerate the make targets and tools tables in README.md | — |
 | `make clean` | Remove the virtualenv and caches | — |
 <!-- make:end -->

@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 import nyc_lease_lens.tools as tools_package
-from nyc_lease_lens.tools import build_registry
+from nyc_lease_lens.tools import TOOL_CLASSES
 from nyc_lease_lens.tools.base import Tool
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,10 +33,10 @@ def make_targets_table() -> str:
 
 def tools_table() -> str:
     tools = _discover_tools()
-    registered = [schema["function"]["name"] for schema in build_registry(None).schemas]
+    registered = [cls.name for cls in TOOL_CLASSES]
     for tool in tools:
         if tool.name not in registered:
-            print(f"warning: {tool.name} is defined but not registered in build_registry()", file=sys.stderr)
+            print(f"warning: {tool.name} is defined but not listed in TOOL_CLASSES", file=sys.stderr)
 
     order = {name: i for i, name in enumerate(registered)}
     tools = sorted(tools, key=lambda t: (order.get(t.name, len(order)), t.name))
@@ -96,11 +96,11 @@ def main() -> int:
     for name, render in SECTIONS.items():
         start, end = f"<!-- {name}:start -->", f"<!-- {name}:end -->"
         block = re.compile(re.escape(start) + ".*?" + re.escape(end), re.DOTALL)
-        if not block.search(updated):
+        match = block.search(updated)
+        if not match:
             print(f"README.md needs {start} and {end} markers where the {name} table should go.", file=sys.stderr)
             return 1
-        table = render()
-        updated = block.sub(lambda _: f"{start}\n{table}\n{end}", updated)
+        updated = f"{updated[: match.start()]}{start}\n{render()}\n{end}{updated[match.end() :]}"
 
     if updated == original:
         print("README.md tables are up to date.")

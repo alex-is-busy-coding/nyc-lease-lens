@@ -16,4 +16,5 @@ class SessionStore:
         return session_id, self._sessions[session_id]
 
     def clear(self, session_id: str | None) -> None:
-        self._sessions.pop(session_id, None)
+        if session_id:
+            self._sessions.pop(session_id, None)

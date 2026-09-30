@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 import requests
 
@@ -33,10 +34,7 @@ class LookupBuilding(Tool):
         "required": ["address"],
     }
 
-    def __init__(self, client: OpenDataClient):
-        self.client = client
-
-    def run(self, address: str, borough: str | None = None) -> dict:
+    def run(self, address: str, borough: str | None = None) -> dict[str, Any]:
         candidates = self._find_candidates(address, borough)
         if not candidates:
             raise ToolError(f"No NYC building found for '{address}'. Check the house number and street.")
@@ -67,7 +65,8 @@ class LookupBuilding(Tool):
 
         zip_code = re.search(r"\b1\d{4}\b", address)
         return [
-            c for c in map(self._candidate, features)
+            c
+            for c in map(self._candidate, features)
             if c
             and (not borough or c["borough"].lower() == borough.lower())
             and (not zip_code or c["zip"] == zip_code.group())
@@ -134,7 +133,9 @@ def hpd_apartments(client: OpenDataClient, bin: str) -> int | None:
 
 def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
     """The BBL plus any older numbers for the same lot. HPD keeps the old block/lot on violations."""
-    rows = client.socrata(HPD_VIOLATIONS, {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"})
+    rows = client.socrata(
+        HPD_VIOLATIONS, {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"}
+    )
     aliases = {bbl}
     for r in rows:
         if r.get("boroid") and r.get("block") and r.get("lot"):
@@ -144,7 +145,9 @@ def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
 
 def hpd_units_on_lots(client: OpenDataClient, bbls: list[str]) -> int:
     lots = " OR ".join(f"(boroid='{b[0]}' AND block='{int(b[1:6])}' AND lot='{int(b[6:])}')" for b in bbls)
-    rows = client.socrata(HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000})
+    rows = client.socrata(
+        HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000}
+    )
     return sum(_int(r.get("legalclassa")) or 0 for r in rows)
 
 
