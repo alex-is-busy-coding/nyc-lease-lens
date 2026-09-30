@@ -6,13 +6,14 @@ from nyc_lease_lens.log import configure_logging
 
 def main() -> None:
     settings = get_settings()
-    configure_logging(settings.log_level, settings.log_format)
+    configure_logging(settings.logging.level, settings.logging.format)
+    server = settings.server
     uvicorn.run(
         "nyc_lease_lens.app:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.reload,
-        reload_dirs=["src"] if settings.reload else None,
+        host=server.host,
+        port=server.port,
+        reload=server.reload,
+        reload_dirs=["src"] if server.reload else None,
         log_config=None,  # keep our logging setup instead of uvicorn's
     )
 

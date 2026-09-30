@@ -13,7 +13,9 @@ make dev     # run the app with auto-reload at http://127.0.0.1:8000
 
 `make setup` runs `make install`, which also installs the git hooks described below. If you cloned the repo before the hooks existed, run `make install` once.
 
-Settings live in `.env` (copied from `.env.example`, never committed) and are read by `src/nyc_lease_lens/config.py`. To add a setting, add a field to `Settings` and a line to `.env.example`.
+Settings live in `.env` (copied from `.env.example`, never committed) and are read by `src/nyc_lease_lens/config.py`, in groups: `settings.llm`, `settings.server`, `settings.opendata` (variables prefixed `OPENDATA_`) and `settings.logging` (prefixed `LOG_`). To add a setting, add a field to the matching group and a line to that group's section of `.env.example`.
+
+Only runtime choices belong in settings (timeouts, retries, the model, log level). Values that change what a grade means, such as look-back periods or scoring thresholds, stay in code so they're reviewed and tested.
 
 The NYC Open Data tools need no API key, so you can work on them without Google Cloud access. Only chatting with the agent calls Vertex AI.
 

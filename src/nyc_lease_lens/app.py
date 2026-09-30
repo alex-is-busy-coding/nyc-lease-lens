@@ -22,35 +22,32 @@ from nyc_lease_lens.tools import build_registry
 STATIC_DIR = Path(__file__).parent / "static"
 
 settings = get_settings()
-configure_logging(settings.log_level, settings.log_format)
+configure_logging(settings.logging.level, settings.logging.format)
 logger = logging.getLogger(__name__)
 
-if settings.vertexai_project:
+llm = settings.llm
+if llm.vertexai_project:
     # Bill Vertex calls to our project; gcloud user credentials have no quota project by default.
-    os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", settings.vertexai_project)
-    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", settings.vertexai_project)
+    os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", llm.vertexai_project)
+    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", llm.vertexai_project)
 
-client = OpenDataClient(
-    geosearch_url=settings.geosearch_url,
-    socrata_url=settings.socrata_url,
-    timeout=settings.opendata_timeout,
-    retries=settings.opendata_retries,
-)
+client = OpenDataClient.from_settings(settings.opendata)
 agent = Agent(
     tools=build_registry(client),
-    model=settings.model,
-    vertex_project=settings.vertexai_project,
-    vertex_location=settings.vertexai_location,
-    max_tool_rounds=settings.max_tool_rounds,
+    model=llm.model,
+    vertex_project=llm.vertexai_project,
+    vertex_location=llm.vertexai_location,
+    max_tool_rounds=llm.max_tool_rounds,
 )
 sessions = SessionStore(agent.system_prompt)
 logger.info(
     "app ready",
     extra={
-        "model": settings.model,
-        "vertex_location": settings.vertexai_location,
+        "model": llm.model,
+        "vertex_location": llm.vertexai_location,
         "tools": len(agent.tools.schemas),
-        "max_tool_rounds": settings.max_tool_rounds,
+        "max_tool_rounds": llm.max_tool_rounds,
+        "opendata_timeout": settings.opendata.timeout,
     },
 )
 
