@@ -1,4 +1,4 @@
-"""The tools the harness can run, and the JSON that describes them to the model."""
+"""Current weather for a city, via Open-Meteo."""
 
 import json
 
@@ -41,32 +41,17 @@ def get_weather(location: str) -> str:
 
 
 # What the model sees: the "set notes" in the screenplay.
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get the current weather (temperature, humidity, wind) for a city.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "City name, e.g. 'New York'"},
-                },
-                "required": ["location"],
+SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get the current weather (temperature, humidity, wind) for a city.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "City name, e.g. 'New York'"},
             },
+            "required": ["location"],
         },
     },
-]
-
-# What the harness runs: tool name -> Python function.
-TOOL_MAP = {"get_weather": get_weather}
-
-
-def run_tool(name: str, args: dict) -> str:
-    """Run one tool call. Models invent tool names and arguments; never let that crash the loop."""
-    if name not in TOOL_MAP:
-        return json.dumps({"error": f"Unknown tool '{name}'. Available: {list(TOOL_MAP)}"})
-    try:
-        return TOOL_MAP[name](**args)
-    except TypeError as e:
-        return json.dumps({"error": f"Bad arguments for {name}: {e}"})
+}

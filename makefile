@@ -37,7 +37,7 @@ auth-check: require-gcloud ## Verify credentials work before starting the app
 		|| { echo "No valid credentials. Run: make login"; exit 1; }
 
 run: .env auth-check ## Start the app
-	$(UV_RUN) python -m nyc_lease_lens.app
+	$(UV_RUN) python -m nyc_lease_lens
 
 dev: .env auth-check ## Start the app with auto-reload
 	$(UV_RUN) uvicorn nyc_lease_lens.app:app --reload --reload-dir src --host $(HOST) --port $(PORT)
