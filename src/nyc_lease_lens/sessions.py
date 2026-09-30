@@ -1,4 +1,7 @@
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class SessionStore:
@@ -13,6 +16,7 @@ class SessionStore:
         session_id = session_id or str(uuid.uuid4())
         if session_id not in self._sessions:
             self._sessions[session_id] = [{"role": "system", "content": self.system_prompt}]
+            logger.debug("session created", extra={"session_id": session_id, "sessions": len(self._sessions)})
         return session_id, self._sessions[session_id]
 
     def clear(self, session_id: str | None) -> None:

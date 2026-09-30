@@ -1,13 +1,16 @@
+import logging
 import re
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from typing import Any
 
 import requests
 
+from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import lot_aliases
+
+logger = logging.getLogger(__name__)
 
 EVICTIONS = "6z8x-wfk4"
 BEDBUGS = "wz6d-d3jb"
@@ -71,7 +74,7 @@ class GetTenantHistory(Tool):
             raise ToolError(f"Tenant history lookup failed: {e}") from e
         lots = f"bbl in ({','.join(repr(a) for a in aliases)})"
 
-        with ThreadPoolExecutor() as pool:
+        with ContextThreadPoolExecutor() as pool:
             evictions = pool.submit(self._evictions, lots, since)
             bedbugs = pool.submit(self._bedbugs, lots)
             court = pool.submit(self._court, lots, since)
@@ -100,6 +103,15 @@ class GetTenantHistory(Tool):
             )
         if notes:
             result["notes"] = notes
+        logger.debug(
+            "tenant history summarized",
+            extra={
+                "bbl": bbl,
+                "evictions": result["evictions"]["total"],
+                "vacates_in_effect": len(result["vacate_orders"]["in_effect"]),
+                "harassment_findings": len(result["housing_court"]["harassment_findings"]),
+            },
+        )
         return result
 
     def _evictions(self, lots: str, since: str) -> dict[str, Any]:

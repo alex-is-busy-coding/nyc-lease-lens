@@ -1,13 +1,16 @@
+import logging
 import re
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from typing import Any
 
 import requests
 
+from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import HPD_BUILDINGS
 from nyc_lease_lens.tools.violations import HPD_VIOLATIONS
+
+logger = logging.getLogger(__name__)
 
 HPD_REGISTRATIONS = "tesw-yqqr"
 HPD_CONTACTS = "feu5-w2e2"
@@ -45,6 +48,7 @@ class GetLandlordProfile(Tool):
             {"$where": f"bin='{bin}'", "$order": "lastregistrationdate DESC", "$limit": 1},
         )
         if not registrations:
+            logger.info("no HPD registration", extra={"bin": bin})
             return {
                 "bin": bin,
                 "registered": False,
@@ -66,7 +70,7 @@ class GetLandlordProfile(Tool):
                 "housing court for unpaid rent until they do."
             )
 
-        with ThreadPoolExecutor() as pool:
+        with ContextThreadPoolExecutor() as pool:
             citywide = pool.submit(self._citywide)
             owner = pool.submit(self._portfolio, _owner_filter(people)) if "head_officer" in people else None
             agent = pool.submit(self._portfolio, _agent_filter(people)) if "managing_agent" in people else None
@@ -89,6 +93,15 @@ class GetLandlordProfile(Tool):
             notes.append(f"Portfolio capped at {MAX_REGISTRATIONS} registrations; totals are a lower bound.")
         if notes:
             result["notes"] = notes
+        logger.debug(
+            "landlord profiled",
+            extra={
+                "bin": bin,
+                "registration": result["registration"]["status"],
+                "owner_registrations": len(owner_ids),
+                "agent_registrations": len(agent_ids),
+            },
+        )
         return result
 
     def _portfolio(self, where: str) -> tuple[set[str], list[dict]]:
@@ -108,7 +121,7 @@ class GetLandlordProfile(Tool):
     def _summarize(self, registrations: list[dict], citywide_rate: float | None) -> dict[str, Any]:
         buildings = {r["buildingid"]: r for r in registrations if r.get("buildingid")}
         ids = sorted(buildings)
-        with ThreadPoolExecutor() as pool:
+        with ContextThreadPoolExecutor() as pool:
             units_future = pool.submit(
                 self._chunked,
                 HPD_BUILDINGS,
@@ -161,7 +174,11 @@ class GetLandlordProfile(Tool):
                     HPD_BUILDINGS, {"$select": "sum(legalclassa) AS n", "$where": "recordstatus='Active'"}
                 )
                 GetLandlordProfile._citywide_rate = 100 * int(violations[0]["n"]) / float(units[0]["n"])
-            except (requests.RequestException, KeyError, IndexError, ValueError, ZeroDivisionError):
+                logger.info(
+                    "citywide violation rate cached", extra={"per_100": round(GetLandlordProfile._citywide_rate, 1)}
+                )
+            except (requests.RequestException, KeyError, IndexError, ValueError, ZeroDivisionError) as e:
+                logger.warning("citywide violation rate unavailable", extra={"error": repr(e)[:200]})
                 return None
         return GetLandlordProfile._citywide_rate
 
@@ -171,7 +188,9 @@ class GetLandlordProfile(Tool):
             try:
                 rows = self.client.socrata(HPD_REGISTRATIONS, {"$select": "max(lastregistrationdate) AS latest"})
                 GetLandlordProfile._registrations_as_of = rows[0]["latest"][:10]
-            except (requests.RequestException, KeyError, IndexError):
+                logger.info("registration data date cached", extra={"as_of": GetLandlordProfile._registrations_as_of})
+            except (requests.RequestException, KeyError, IndexError) as e:
+                logger.warning("registration data date unavailable; using today", extra={"error": repr(e)[:200]})
                 return date.today().isoformat()
         return GetLandlordProfile._registrations_as_of
 
@@ -184,7 +203,7 @@ class GetLandlordProfile(Tool):
                 where = f"{extra} AND {where}"
             return self._query(dataset, params | {"$where": where, "$limit": 50000})
 
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ContextThreadPoolExecutor(max_workers=4) as pool:
             return [row for rows in pool.map(fetch, chunks) for row in rows]
 
     def _query(self, dataset: str, params: dict) -> list[dict]:

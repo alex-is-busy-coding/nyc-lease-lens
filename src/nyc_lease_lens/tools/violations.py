@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import Counter
 from collections.abc import Iterable
@@ -7,6 +8,8 @@ from typing import Any
 import requests
 
 from nyc_lease_lens.tools.base import Tool, ToolError
+
+logger = logging.getLogger(__name__)
 
 HPD_VIOLATIONS = "wvxf-dwi5"
 MAX_ROWS = 5000
@@ -121,6 +124,10 @@ class GetHpdViolations(Tool):
             notes.append(f"Class counts are exact; categories are based on the {MAX_ROWS} most recent violations only.")
         if notes:
             result["notes"] = notes
+        logger.debug(
+            "violations summarized",
+            extra={"bbl": bbl, "open": result["open_now"].get("total"), "open_c": result["open_now"].get("C", 0)},
+        )
         return result
 
     def _query(self, params: dict) -> list[dict]:
@@ -132,7 +139,8 @@ class GetHpdViolations(Tool):
     def _optional_query(self, notes: list[str], what: str, params: dict) -> list[dict]:
         try:
             return self._query(params)
-        except ToolError:
+        except ToolError as e:
+            logger.warning("optional violations query failed", extra={"query": what, "error": str(e)[:200]})
             notes.append(f"Could not load {what} (NYC Open Data was slow); the class counts are complete.")
             return []
 

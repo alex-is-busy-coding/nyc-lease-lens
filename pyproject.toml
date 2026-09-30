@@ -32,8 +32,8 @@ line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-# pycodestyle, pyflakes, isort, bugbear, pyupgrade, simplify
-select = ["E", "F", "I", "B", "UP", "SIM"]
+# pycodestyle, pyflakes, isort, bugbear, pyupgrade, simplify, no print(), logging call style
+select = ["E", "F", "I", "B", "UP", "SIM", "T20", "G", "LOG"]
 
 [tool.mypy]
 python_version = "3.13"

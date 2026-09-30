@@ -7,6 +7,7 @@ Usage: uv run python scripts/update_readme.py [--check]
 import argparse
 import importlib
 import inspect
+import logging
 import pkgutil
 import re
 import sys
@@ -21,6 +22,7 @@ from nyc_lease_lens.tools.risk import ScoreBuildingRisk
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 MAKEFILE = ROOT / "makefile"
+logger = logging.getLogger("update_readme")
 
 
 def make_targets_table() -> str:
@@ -38,7 +40,7 @@ def tools_table() -> str:
     registered = [cls.name for cls in TOOL_CLASSES]
     for tool in tools:
         if tool.name not in registered:
-            print(f"warning: {tool.name} is defined but not listed in TOOL_CLASSES", file=sys.stderr)
+            logger.warning("%s is defined but not listed in TOOL_CLASSES", tool.name)
 
     order = {name: i for i, name in enumerate(registered)}
     tools = sorted(tools, key=lambda t: (order.get(t.name, len(order)), t.name))
@@ -127,6 +129,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="exit 1 if README.md is out of date, without writing")
     args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr)
 
     original = updated = README.read_text()
     for name, render in SECTIONS.items():
@@ -134,18 +137,18 @@ def main() -> int:
         block = re.compile(re.escape(start) + ".*?" + re.escape(end), re.DOTALL)
         match = block.search(updated)
         if not match:
-            print(f"README.md needs {start} and {end} markers where the {name} table should go.", file=sys.stderr)
+            logger.error("README.md needs %s and %s markers where the %s table should go.", start, end, name)
             return 1
         updated = f"{updated[: match.start()]}{start}\n{render()}\n{end}{updated[match.end() :]}"
 
     if updated == original:
-        print("README.md tables are up to date.")
+        logger.info("README.md tables are up to date.")
         return 0
     if args.check:
-        print("README.md tables are out of date. Run: make docs", file=sys.stderr)
+        logger.error("README.md tables are out of date. Run: make docs")
         return 1
     README.write_text(updated)
-    print(f"Updated README.md ({', '.join(SECTIONS)} tables).")
+    logger.info("Updated README.md (%s tables).", ", ".join(SECTIONS))
     return 0
 
 

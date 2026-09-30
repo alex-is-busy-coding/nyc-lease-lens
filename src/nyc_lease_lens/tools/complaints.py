@@ -1,14 +1,17 @@
+import logging
 import re
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from statistics import median
 from typing import Any
 
 import requests
 
+from nyc_lease_lens.context import ContextThreadPoolExecutor
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import PLUTO, hpd_units_on_lots, lot_aliases
+
+logger = logging.getLogger(__name__)
 
 SERVICE_REQUESTS = "erm2-nwe9"
 CATEGORIES = ["heat_hot_water", "pests", "mold", "leaks_plumbing", "noise", "sanitation", "repairs"]
@@ -86,7 +89,7 @@ class Get311Complaints(Tool):
         # 311 keeps complaints under a lot's old BBL after it is renumbered.
         aliases = self._call(lot_aliases, self.client, bbl)
         ids = ",".join(f"'{b}'" for b in aliases)
-        with ThreadPoolExecutor() as pool:
+        with ContextThreadPoolExecutor() as pool:
             building_future = pool.submit(self._counts_by_bbl, f"bbl in ({ids})", since)
             heat_future = pool.submit(self._heat_days, ids)
             nearby_future = None
@@ -105,6 +108,7 @@ class Get311Complaints(Tool):
         notes: list[str] = []
         if len(aliases) > 1:
             old = ", ".join(a for a in aliases if a != bbl)
+            logger.info("lot renumbered: including old BBLs", extra={"bbl": bbl, "old_bbls": old})
             notes.append(f"This lot was renumbered; complaints filed under {old} are included.")
 
         if nearby:
@@ -117,6 +121,7 @@ class Get311Complaints(Tool):
             result["residential_units"] = own_units or None
             result["categories"] = _compare(counts, own_units, nearby, units, wanted)
             if not own_units:
+                logger.info("unit count unknown: no per-unit comparison", extra={"bbl": bbl})
                 notes.append("Unit count unknown, so per-unit comparison is unavailable for this building.")
         else:
             result["categories"] = [{"category": c, "complaints": counts[c]} for c in wanted if counts[c]]
@@ -131,6 +136,10 @@ class Get311Complaints(Tool):
             notes.append("No 311 complaints about this building in this period.")
         if notes:
             result["notes"] = notes
+        logger.debug(
+            "complaints summarized",
+            extra={"bbl": bbl, "complaints": counts.total(), "nearby_buildings": len(nearby)},
+        )
         return result
 
     def _counts_by_bbl(self, where: str, since: str) -> dict[str, Counter]:

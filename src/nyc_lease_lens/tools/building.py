@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -6,6 +7,8 @@ import requests
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.violations import HPD_VIOLATIONS
+
+logger = logging.getLogger(__name__)
 
 PLUTO = "64uk-42ks"
 HPD_BUILDINGS = "kj4p-ruqc"
@@ -37,11 +40,13 @@ class LookupBuilding(Tool):
     def run(self, address: str, borough: str | None = None) -> dict[str, Any]:
         candidates = self._find_candidates(address, borough)
         if not candidates:
+            logger.info("address not found", extra={"borough": borough})
             raise ToolError(f"No NYC building found for '{address}'. Check the house number and street.")
 
         # GeoSearch ranks on text alone, so the same street address in two boroughs ties.
         same_address = {c["bbl"]: c for c in candidates if c["name"] == candidates[0]["name"]}
         if len(same_address) > 1:
+            logger.info("address ambiguous", extra={"candidates": len(same_address)})
             return {
                 "ambiguous": True,
                 "message": "This address exists in more than one borough. Ask the user which one they mean.",
@@ -55,6 +60,14 @@ class LookupBuilding(Tool):
             place["building"] = building
         if notes:
             place["notes"] = notes
+        logger.info(
+            "building resolved",
+            extra={
+                "bbl": place["bbl"],
+                "bin": place["bin"],
+                "apartments": (building or {}).get("apartments_in_building"),
+            },
+        )
         return place
 
     def _find_candidates(self, address: str, borough: str | None) -> list[dict]:
@@ -81,7 +94,8 @@ class LookupBuilding(Tool):
             notes.append(f"PLUTO lookup failed ({e}).")
         try:
             apartments = hpd_apartments(self.client, bin) if bin else None
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logger.warning("HPD apartment count unavailable", extra={"bin": bin, "error": str(e)[:200]})
             apartments = None
 
         building = {}
@@ -103,6 +117,7 @@ class LookupBuilding(Tool):
         if not apartments and building.get("residential_units_on_lot") == 0:
             notes.append("No residential units on record: this may not be an apartment building.")
         elif apartments and rows and not building.get("residential_units_on_lot"):
+            logger.info("PLUTO record looks outdated", extra={"bbl": bbl, "bin": bin})
             notes.append("PLUTO's record for this lot looks outdated (it may have been renumbered).")
         return building or None, notes
 

@@ -1,8 +1,11 @@
+import logging
+import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from nyc_lease_lens import scoring
+from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.log import ms_since
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import BOROUGHS, LookupBuilding
@@ -10,6 +13,8 @@ from nyc_lease_lens.tools.complaints import Get311Complaints
 from nyc_lease_lens.tools.history import GetTenantHistory
 from nyc_lease_lens.tools.landlord import GetLandlordProfile
 from nyc_lease_lens.tools.violations import GetHpdViolations
+
+logger = logging.getLogger(__name__)
 
 # Builds a check's arguments from the lookup result, or None when it can't run.
 ArgsFrom = Callable[[dict[str, Any]], dict[str, Any] | None]
@@ -63,6 +68,7 @@ class ScoreBuildingRisk(Tool):
             return building
         facts = building.get("building") or {}
         if not facts.get("apartments_in_building") and facts.get("residential_units_on_lot") == 0:
+            logger.info("not graded: no apartments", extra={"bbl": building["bbl"]})
             return {
                 "address": building["address"],
                 "bbl": building["bbl"],
@@ -72,13 +78,14 @@ class ScoreBuildingRisk(Tool):
 
         results: dict[str, dict[str, Any] | None] = dict.fromkeys(self.checks)
         gaps: list[str] = []
-        with ThreadPoolExecutor() as pool:
+        with ContextThreadPoolExecutor() as pool:
             futures = {}
             for name, (_, args_from) in self.checks.items():
                 if (args := args_from(building)) is None:
+                    logger.info("check skipped: not enough building data", extra={"check": name})
                     gaps.append(f"{name} check skipped: not enough building data")
                 else:
-                    futures[name] = pool.submit(self.check_tools[name].run, **args)
+                    futures[name] = pool.submit(self._run_check, name, args)
             for name, future in futures.items():
                 try:
                     results[name] = future.result()
@@ -97,4 +104,26 @@ class ScoreBuildingRisk(Tool):
             notes = [*notes, "Some checks failed, so the grade may understate the risk."]
         if notes:
             report["notes"] = notes
+        logger.info(
+            "building graded",
+            extra={
+                "bbl": building["bbl"],
+                "grade": report["grade"],
+                "score": report["score"],
+                "red_flags": len(report["red_flags"]),
+                "data_gaps": len(gaps),
+            },
+        )
         return report
+
+    def _run_check(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+        started = time.perf_counter()
+        try:
+            result = self.check_tools[name].run(**args)
+        except ToolError as e:
+            logger.warning(
+                "check failed", extra={"check": name, "duration_ms": ms_since(started), "error": str(e)[:200]}
+            )
+            raise
+        logger.info("check finished", extra={"check": name, "duration_ms": ms_since(started)})
+        return result

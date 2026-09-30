@@ -140,6 +140,20 @@ These come from problems we hit with NYC Open Data:
 | HPD Violations | `wvxf-dwi5` | Housing code violations |
 | 311 Service Requests | `erm2-nwe9` | Complaints |
 
+## Logging
+
+Use the standard library logger, never `print` (ruff's `T20` rule rejects it):
+
+```python
+logger = logging.getLogger(__name__)
+logger.info("check finished", extra={"check": name, "duration_ms": ms_since(started)})
+```
+
+- Put values in `extra=` fields rather than in the message. They show up as `key=value` with `LOG_FORMAT=text` and as JSON fields with `LOG_FORMAT=json`. Field names can't reuse `LogRecord` attributes such as `message` or `args` (ruff's `G101` catches this).
+- Every line logged during a request carries its request ID. When you run work in threads, use `ContextThreadPoolExecutor` from `nyc_lease_lens.context`, or the ID is lost.
+- Levels: `DEBUG` for detail such as chat text, tool arguments and every Open Data query; `INFO` for one line per meaningful step; `WARNING` for slow or failed requests and degraded results; `exception()` for unexpected errors.
+- Don't log chat messages or addresses above `DEBUG`.
+
 ## Code style
 
 - Ruff decides formatting; don't fight it.
