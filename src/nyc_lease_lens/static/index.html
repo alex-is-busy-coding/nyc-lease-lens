@@ -112,6 +112,50 @@
                 color: #000;
                 border: 1px solid #000;
             }
+            .welcome .content {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .welcome h2 {
+                font-size: 1.1rem;
+            }
+            .welcome ul {
+                padding-left: 1.25rem;
+            }
+            .welcome .examples {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                align-items: center;
+            }
+            .welcome .examples button {
+                padding: 0.4rem 0.75rem;
+                text-transform: none;
+                letter-spacing: normal;
+                font-size: 0.85rem;
+            }
+            .welcome .fine-print {
+                font-size: 0.75rem;
+                color: #999;
+            }
+            @media (max-width: 600px) {
+                #messages {
+                    padding: 1.25rem;
+                }
+                .msg {
+                    max-width: 100%;
+                }
+                #input-area {
+                    flex-wrap: wrap;
+                }
+                #user-input {
+                    flex-basis: 100%;
+                }
+                #input-area > button {
+                    flex: 1;
+                }
+            }
             button:disabled {
                 opacity: 0.3;
                 cursor: default;
@@ -135,6 +179,40 @@
                 <button id="clear-btn" class="secondary" title="Start a new conversation">Clear</button>
             </div>
         </div>
+        <template id="welcome">
+            <div class="msg assistant welcome">
+                <div class="role">assistant</div>
+                <div class="content">
+                    <h2>Welcome to NYC Lease Lens</h2>
+                    <p>
+                        Thinking of renting in New York City? Give me the building's address and I'll check the
+                        city's public records for red flags before you sign the lease.
+                    </p>
+                    <div>
+                        <p><strong>What I check</strong></p>
+                        <ul>
+                            <li>Housing code violations, especially hazardous ones like no heat, mold, pests or lead paint</li>
+                            <li>311 complaints, compared with nearby buildings</li>
+                            <li>The landlord's track record across their other buildings</li>
+                            <li>Evictions, harassment cases, bedbug reports and vacate orders</li>
+                        </ul>
+                    </div>
+                    <p>
+                        <strong>What you get:</strong> a grade from A (no red flags) to F, the reasons behind it, and
+                        any good signs. A check takes up to a minute. Afterwards, ask follow-up questions such as
+                        "What are the open violations?" or "Who manages this building?"
+                    </p>
+                    <div class="examples">
+                        <span>Try an example:</span>
+                        <button class="secondary" data-address="157 Ludlow St, Manhattan">157 Ludlow St, Manhattan</button>
+                        <button class="secondary" data-address="760 Eldert Lane, Brooklyn">760 Eldert Lane, Brooklyn</button>
+                    </div>
+                    <p class="fine-print">
+                        Based on NYC Open Data, which can be weeks behind. This is information, not legal advice.
+                    </p>
+                </div>
+            </div>
+        </template>
         <script>
             const messages = document.getElementById("messages");
             const userInput = document.getElementById("user-input");
@@ -174,7 +252,11 @@
                 userInput.value = "";
                 setBusy(true);
                 addMessage("you", text);
-                const loading = addMessage("assistant", "Thinking...", true);
+                const loading = addMessage(
+                    "assistant",
+                    "Checking city records… this can take up to a minute.",
+                    true,
+                );
 
                 try {
                     const res = await fetch("/chat", {
@@ -220,6 +302,7 @@
                 const previous = sessionId;
                 sessionId = null;
                 messages.replaceChildren();
+                showWelcome();
                 userInput.value = "";
                 userInput.focus();
                 if (!previous) return;
@@ -231,11 +314,24 @@
                 }
             }
 
+            // Shown on load and after Clear. Rendered here, not by the model, so it's instant and free.
+            function showWelcome() {
+                const welcome = document.getElementById("welcome").content.cloneNode(true);
+                for (const button of welcome.querySelectorAll("[data-address]")) {
+                    button.addEventListener("click", function () {
+                        userInput.value = "Check " + button.dataset.address;
+                        send();
+                    });
+                }
+                messages.appendChild(welcome);
+            }
+
             sendBtn.addEventListener("click", send);
             clearBtn.addEventListener("click", clearChat);
             userInput.addEventListener("keydown", function (e) {
                 if (e.key === "Enter") send();
             });
+            showWelcome();
             userInput.focus();
         </script>
     </body>
