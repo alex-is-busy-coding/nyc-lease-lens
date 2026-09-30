@@ -101,8 +101,7 @@ Tools are how the agent gets facts. Each one is a class in its own module under 
            "required": ["bbl"],
        }
 
-       def run(self, bbl: str) -> dict[str, Any]:
-           ...
+       def run(self, bbl: str) -> dict[str, Any]: ...
    ```
 
    `self.client` is the shared `OpenDataClient`. Return a plain dict; the registry turns it into JSON for the model.
