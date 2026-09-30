@@ -3,7 +3,16 @@ from datetime import date
 from typing import Any
 
 GRADES = [(10, "A"), (25, "B"), (45, "C"), (70, "D")]  # upper bounds; 70+ is F
-SCALE = "0 (no red flags) to 100. A: 0-9, B: 10-24, C: 25-44, D: 45-69, F: 70+"
+
+
+def grade_bands() -> list[tuple[str, int, int]]:
+    """(grade, lowest score, highest score) for each grade, A to F."""
+    lows = [0] + [bound for bound, _ in GRADES]
+    highs = [bound - 1 for bound, _ in GRADES] + [100]
+    return list(zip([g for _, g in GRADES] + ["F"], lows, highs, strict=True))
+
+
+SCALE = "0 (no red flags) to 100. " + ", ".join(f"{g}: {lo}-{hi}" for g, lo, hi in grade_bands())
 COMPLAINT_CAP = 18
 COMPLAINT_LABELS = {
     "heat_hot_water": "heat/hot water",

@@ -46,5 +46,5 @@ repos:
         name: README generated tables
         entry: uv run python scripts/update_readme.py
         language: system
-        files: ^(makefile|README\.md|scripts/update_readme\.py|src/nyc_lease_lens/tools/.*)$
+        files: ^(makefile|README\.md|scripts/update_readme\.py|src/nyc_lease_lens/(scoring\.py|tools/.*))$
         pass_filenames: false

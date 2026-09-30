@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -9,6 +10,9 @@ from nyc_lease_lens.tools.complaints import Get311Complaints
 from nyc_lease_lens.tools.history import GetTenantHistory
 from nyc_lease_lens.tools.landlord import GetLandlordProfile
 from nyc_lease_lens.tools.violations import GetHpdViolations
+
+# Builds a check's arguments from the lookup result, or None when it can't run.
+ArgsFrom = Callable[[dict[str, Any]], dict[str, Any] | None]
 
 
 class ScoreBuildingRisk(Tool):
@@ -35,13 +39,23 @@ class ScoreBuildingRisk(Tool):
         "required": ["address"],
     }
 
+    lookup_tool: type[Tool] = LookupBuilding
+    # Run in parallel after the lookup. Keys are the matching scoring.score() parameters.
+    # The README flow diagram is generated from this table.
+    checks: dict[str, tuple[type[Tool], ArgsFrom]] = {
+        "violations": (GetHpdViolations, lambda b: {"bbl": b["bbl"]}),
+        "complaints": (
+            Get311Complaints,
+            lambda b: {"bbl": b["bbl"], "latitude": b["latitude"], "longitude": b["longitude"]},
+        ),
+        "landlord": (GetLandlordProfile, lambda b: {"bin": b["bin"]} if b.get("bin") else None),
+        "history": (GetTenantHistory, lambda b: {"bbl": b["bbl"]}),
+    }
+
     def __init__(self, client: OpenDataClient):
         super().__init__(client)
-        self.lookup = LookupBuilding(client)
-        self.violations = GetHpdViolations(client)
-        self.complaints = Get311Complaints(client)
-        self.landlord = GetLandlordProfile(client)
-        self.history = GetTenantHistory(client)
+        self.lookup = self.lookup_tool(client)
+        self.check_tools = {name: tool(client) for name, (tool, _) in self.checks.items()}
 
     def run(self, address: str, borough: str | None = None) -> dict[str, Any]:
         building = self.lookup.run(address=address, borough=borough)
@@ -56,39 +70,26 @@ class ScoreBuildingRisk(Tool):
                 "notes": ["No apartments on record for this building, so there is no rental risk grade."],
             }
 
-        bbl, bin = building["bbl"], building.get("bin")
-        checks = {
-            "violations": lambda: self.violations.run(bbl=bbl),
-            "complaints": lambda: self.complaints.run(
-                bbl=bbl, latitude=building["latitude"], longitude=building["longitude"]
-            ),
-            "landlord": (lambda: self.landlord.run(bin=bin)) if bin else None,
-            "history": lambda: self.history.run(bbl=bbl),
-        }
-        results: dict[str, dict[str, Any] | None] = {}
+        results: dict[str, dict[str, Any] | None] = dict.fromkeys(self.checks)
         gaps: list[str] = []
         with ThreadPoolExecutor() as pool:
-            futures = {name: pool.submit(check) for name, check in checks.items() if check}
+            futures = {}
+            for name, (_, args_from) in self.checks.items():
+                if (args := args_from(building)) is None:
+                    gaps.append(f"{name} check skipped: not enough building data")
+                else:
+                    futures[name] = pool.submit(self.check_tools[name].run, **args)
             for name, future in futures.items():
                 try:
                     results[name] = future.result()
                 except ToolError as e:
-                    results[name] = None
                     gaps.append(f"{name} check failed: {e}")
-        if not bin:
-            gaps.append("landlord check skipped: no BIN for this address")
 
         report = {
             "address": building["address"],
-            "bbl": bbl,
-            "bin": bin,
-            **scoring.score(
-                building,
-                results.get("violations"),
-                results.get("complaints"),
-                results.get("landlord"),
-                results.get("history"),
-            ),
+            "bbl": building["bbl"],
+            "bin": building.get("bin"),
+            **scoring.score(building, **results),
         }
         notes = building.get("notes", [])
         if gaps:
