@@ -3,11 +3,16 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-from nyc_lease_lens import sessions
-from nyc_lease_lens.agent import run_agent
+from nyc_lease_lens.agent import Agent
+from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.schemas import ChatRequest, ChatResponse
+from nyc_lease_lens.sessions import SessionStore
+from nyc_lease_lens.tools import build_registry
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+agent = Agent(tools=build_registry(OpenDataClient()))
+sessions = SessionStore(agent.system_prompt)
 
 app = FastAPI(title="NYC Lease Lens")
 
@@ -25,7 +30,7 @@ def chat(request: ChatRequest):
     messages += [{"role": "user", "content": request.message}]
 
     try:
-        response, tool_calls = run_agent(messages)
+        response, tool_calls = agent.run(messages)
     except Exception as e:
         response, tool_calls = f"Model call failed: {type(e).__name__}: {str(e)[:300]}", []
 
