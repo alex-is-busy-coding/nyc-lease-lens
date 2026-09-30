@@ -11,8 +11,8 @@ make setup   # create .env, install deps, log in to Google Cloud, enable Vertex 
 make dev     # start with auto-reload at http://127.0.0.1:8000
 ```
 
-Run `make help` to list every target. 
-Config lives in `.env` (copied from `.env.example`, gitignored)
+Run `make help` to list every target.
+Config lives in `.env` (copied from `.env.example`, gitignored).
 Override any value per call, e.g. `make dev PORT=9000`.
 
 ## License
