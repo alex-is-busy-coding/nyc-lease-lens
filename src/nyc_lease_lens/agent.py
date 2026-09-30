@@ -2,7 +2,6 @@ import json
 
 import litellm
 
-from nyc_lease_lens import config
 from nyc_lease_lens.tools import ToolRegistry
 
 SYSTEM_PROMPT = (
@@ -20,14 +19,18 @@ class Agent:
     def __init__(
         self,
         tools: ToolRegistry,
-        system_prompt: str = SYSTEM_PROMPT,
-        model: str = config.MODEL,
+        model: str,
+        vertex_project: str | None = None,
+        vertex_location: str | None = None,
         max_tool_rounds: int = 5,
+        system_prompt: str = SYSTEM_PROMPT,
     ):
         self.tools = tools
-        self.system_prompt = system_prompt
         self.model = model
+        self.vertex_project = vertex_project
+        self.vertex_location = vertex_location
         self.max_tool_rounds = max_tool_rounds
+        self.system_prompt = system_prompt
 
     def run(self, messages: list[dict]) -> tuple[str, list[dict]]:
         """Complete until the model answers without asking for a tool.
@@ -39,8 +42,8 @@ class Agent:
         for _ in range(self.max_tool_rounds):
             reply = litellm.completion(
                 model=self.model,
-                vertex_project=config.VERTEXAI_PROJECT,
-                vertex_location=config.VERTEXAI_LOCATION,
+                vertex_project=self.vertex_project,
+                vertex_location=self.vertex_location,
                 messages=messages,
                 tools=self.tools.schemas,
             ).choices[0].message

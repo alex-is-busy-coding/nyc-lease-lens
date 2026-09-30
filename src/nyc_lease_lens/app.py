@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
 from nyc_lease_lens.agent import Agent
+from nyc_lease_lens.config import get_settings
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.schemas import ChatRequest, ChatResponse
 from nyc_lease_lens.sessions import SessionStore
@@ -11,7 +12,19 @@ from nyc_lease_lens.tools import build_registry
 
 STATIC_DIR = Path(__file__).parent / "static"
 
-agent = Agent(tools=build_registry(OpenDataClient()))
+settings = get_settings()
+client = OpenDataClient(
+    geosearch_url=settings.geosearch_url,
+    socrata_url=settings.socrata_url,
+    timeout=settings.opendata_timeout,
+)
+agent = Agent(
+    tools=build_registry(client),
+    model=settings.model,
+    vertex_project=settings.vertexai_project,
+    vertex_location=settings.vertexai_location,
+    max_tool_rounds=settings.max_tool_rounds,
+)
 sessions = SessionStore(agent.system_prompt)
 
 app = FastAPI(title="NYC Lease Lens")

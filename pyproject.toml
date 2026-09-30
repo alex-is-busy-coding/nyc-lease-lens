@@ -9,6 +9,7 @@ dependencies = [
     "litellm>=1.50",
     "google-cloud-aiplatform>=1.40.0",
     "requests>=2.31",
+    "pydantic-settings>=2.15.0",
 ]
 
 [project.scripts]

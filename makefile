@@ -3,7 +3,7 @@ include .env
 export
 endif
 
-UV_RUN := uv run --env-file .env
+UV_RUN := uv run
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env install login gcp-setup auth-check run dev clean require-gcloud
@@ -40,7 +40,7 @@ run: .env auth-check ## Start the app
 	$(UV_RUN) python -m nyc_lease_lens
 
 dev: .env auth-check ## Start the app with auto-reload
-	$(UV_RUN) uvicorn nyc_lease_lens.app:app --reload --reload-dir src --host $(HOST) --port $(PORT)
+	RELOAD=true $(UV_RUN) python -m nyc_lease_lens
 
 clean: ## Remove the virtualenv and caches
 	rm -rf .venv
