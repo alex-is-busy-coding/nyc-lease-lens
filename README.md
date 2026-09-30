@@ -15,9 +15,28 @@ make setup   # create .env, install deps, log in to Google Cloud, enable Vertex 
 make dev     # start with auto-reload at http://127.0.0.1:8000
 ```
 
-Run `make help` to list every target.
 Config lives in `.env` (copied from `.env.example`, gitignored).
 Override any value per call, e.g. `make dev PORT=9000`.
+
+## Make targets
+
+Run `make help` prints the same list.
+
+<!-- make:start -->
+| Target | What it does | Runs first |
+| --- | --- | --- |
+| `make help` | Show this help | — |
+| `make setup` | First-time setup: .env, deps, gcloud login, enable Vertex AI | `env`, `install`, `login`, `gcp-setup` |
+| `make env` | Create .env from .env.example | — |
+| `make install` | Install dependencies from uv.lock | `.env` |
+| `make login` | Log in to Google Cloud and point ADC at the project | `require-gcloud` |
+| `make gcp-setup` | Enable the Vertex AI API on the project | `require-gcloud` |
+| `make auth-check` | Verify credentials work before starting the app | `require-gcloud` |
+| `make run` | Start the app | `.env`, `auth-check` |
+| `make dev` | Start the app with auto-reload | `.env`, `auth-check` |
+| `make docs` | Regenerate the make targets and tools tables in README.md | — |
+| `make clean` | Remove the virtualenv and caches | — |
+<!-- make:end -->
 
 ## Tools
 

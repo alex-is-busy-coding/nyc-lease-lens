@@ -42,8 +42,8 @@ run: .env auth-check ## Start the app
 dev: .env auth-check ## Start the app with auto-reload
 	RELOAD=true $(UV_RUN) python -m nyc_lease_lens
 
-docs: ## Regenerate the tools table in README.md
-	$(UV_RUN) python scripts/update_readme_tools.py
+docs: ## Regenerate the make targets and tools tables in README.md
+	$(UV_RUN) python scripts/update_readme.py
 
 clean: ## Remove the virtualenv and caches
 	rm -rf .venv

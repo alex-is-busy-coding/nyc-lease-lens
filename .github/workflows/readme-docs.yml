@@ -1,11 +1,12 @@
-name: Update README tools table
+name: Update README tables
 
 on:
   push:
     branches: ["**"]
     paths:
+      - "makefile"
       - "src/nyc_lease_lens/tools/**"
-      - "scripts/update_readme_tools.py"
+      - "scripts/update_readme.py"
       - "README.md"
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: readme-tools-${{ github.ref }}
+  group: readme-docs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,9 +30,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Regenerate tools table
-        run: uv run python scripts/update_readme_tools.py
+      - name: Regenerate README tables
+        run: uv run python scripts/update_readme.py
 
+      # Pushes made with GITHUB_TOKEN don't trigger workflows, so this can't loop.
       - name: Commit if changed
         run: |
           if git diff --quiet README.md; then
@@ -40,5 +42,5 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "docs(readme): update tools table" README.md
+          git commit -m "docs(readme): update generated tables" README.md
           git push origin "HEAD:${GITHUB_REF_NAME}"
