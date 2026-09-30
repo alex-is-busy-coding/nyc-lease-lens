@@ -105,9 +105,10 @@ Tools are how the agent gets facts. Each one is a class in its own module under 
    ```
 
    `self.client` is the shared `OpenDataClient`. Return a plain dict; the registry turns it into JSON for the model.
-2. Add the class to `TOOL_CLASSES` in `tools/__init__.py`.
-3. Update `SYSTEM_PROMPT` in `agent.py` if the agent should call it at a specific point.
-4. Run `make docs` to add it to the README tables.
+2. List the datasets it reads in `data_sources` (see [Data sources](#data-sources) below).
+3. Add the class to `TOOL_CLASSES` in `tools/__init__.py`.
+4. Update `SYSTEM_PROMPT` in `agent.py` if the agent should call it at a specific point.
+5. Run `make docs` to add it to the README tables.
 
 ### What makes a good tool
 
@@ -132,13 +133,7 @@ These come from problems we hit with NYC Open Data:
 
 ### Data sources
 
-| Dataset | ID | Used for |
-| --- | --- | --- |
-| NYC GeoSearch | (not Socrata) | Address to BBL, BIN and coordinates |
-| PLUTO | `64uk-42ks` | Year built, floors, units, owner |
-| HPD Buildings | `kj4p-ruqc` | Apartment count by BIN |
-| HPD Violations | `wvxf-dwi5` | Housing code violations |
-| 311 Service Requests | `erm2-nwe9` | Complaints |
+Every dataset is defined once in `src/nyc_lease_lens/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
 
 ## Logging
 

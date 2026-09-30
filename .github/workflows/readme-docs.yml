@@ -7,6 +7,7 @@ on:
       - "makefile"
       - "src/nyc_lease_lens/tools/**"
       - "src/nyc_lease_lens/scoring.py"
+      - "src/nyc_lease_lens/datasets.py"
       - "scripts/update_readme.py"
       - "README.md"
   workflow_dispatch:

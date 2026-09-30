@@ -72,6 +72,43 @@ Each red flag adds points, and the total is capped at 100:
 
 The exact weights are in [src/nyc_lease_lens/scoring.py](src/nyc_lease_lens/scoring.py).
 
+## Data
+
+Every fact comes from public City of New York records, fetched live when you ask; the app stores none of it. No account or API key is needed for any of these datasets.
+
+Most of the data comes from HPD, the city's Department of Housing Preservation and Development. The table is generated from [src/nyc_lease_lens/datasets.py](src/nyc_lease_lens/datasets.py) and the datasets each tool declares; `make docs` refreshes it.
+
+<!-- data:start -->
+| Dataset | Published by | Updated | What we use it for | Read by |
+| --- | --- | --- | --- | --- |
+| [NYC GeoSearch](https://geosearch.planninglabs.nyc/) | Department of City Planning | Quarterly | Turning an address into a BBL, BIN and coordinates | `lookup_building` |
+| [Primary Land Use Tax Lot Output (PLUTO)](https://data.cityofnewyork.us/d/64uk-42ks) | Department of City Planning | Quarterly | Year built, floors, units and owner of record for each tax lot | `lookup_building`, `get_311_complaints` |
+| [Buildings Subject to HPD Jurisdiction](https://data.cityofnewyork.us/d/kj4p-ruqc) | HPD | Monthly | Legal apartment counts per building | `lookup_building`, `get_311_complaints`, `get_landlord_profile` |
+| [Housing Maintenance Code Violations](https://data.cityofnewyork.us/d/wvxf-dwi5) | HPD | Daily | Violations by severity class and type, and old lot numbers after renumbering | `get_hpd_violations`, `get_311_complaints`, `get_landlord_profile`, `get_tenant_history` |
+| [311 Service Requests from 2020 to Present](https://data.cityofnewyork.us/d/erm2-nwe9) | 311 | Daily | Complaints about the building and its neighbors | `get_311_complaints` |
+| [Multiple Dwelling Registrations](https://data.cityofnewyork.us/d/tesw-yqqr) | HPD | Monthly | Whether the building is registered, and the buildings in a landlord's portfolio | `get_landlord_profile` |
+| [Registration Contacts](https://data.cityofnewyork.us/d/feu5-w2e2) | HPD | Monthly | Owner, head officer and managing agent, used to link a landlord's buildings | `get_landlord_profile` |
+| [Buildings Selected for the Alternative Enforcement Program (AEP)](https://data.cityofnewyork.us/d/hcir-3275) | HPD | Monthly | Which of a landlord's buildings are among the city's worst-maintained | `get_landlord_profile` |
+| [Evictions](https://data.cityofnewyork.us/d/6z8x-wfk4) | Department of Investigation | Daily | Residential evictions carried out by city marshals | `get_tenant_history` |
+| [Bedbug Reporting](https://data.cityofnewyork.us/d/wz6d-d3jb) | HPD | Monthly | Owners' annual bedbug reports, and missing ones | `get_tenant_history` |
+| [Housing Litigations](https://data.cityofnewyork.us/d/59kj-x8nc) | HPD | Monthly | Housing court cases, harassment findings and court-appointed administrators | `get_tenant_history` |
+| [Order to Repair/Vacate Orders](https://data.cityofnewyork.us/d/tb8q-a3ar) | HPD | Daily | Orders forcing tenants out of unsafe apartments or buildings | `get_tenant_history` |
+<!-- data:end -->
+
+### What gets sent where
+
+- **The address you type** goes to NYC GeoSearch to find the building. The checks then query NYC Open Data (data.cityofnewyork.us) by the building's IDs and coordinates.
+- **Your messages and the check results** go to the language model (Gemini on Google Vertex AI by default) so it can write the answer.
+- **Conversations** are kept only in the server's memory. They are gone when you press Clear or the server restarts. At the default log level, the logs record timings and grades, not your messages or addresses.
+
+### Limits of the data
+
+- **It's only as current as the city's updates.** Some datasets update daily, others monthly or quarterly (see the table). New landlord registrations, for example, can be missing for a month or more.
+- **Records show what was reported, not what is true today.** A violation can be fixed but not yet closed, and a 311 complaint is a report, not a confirmed problem.
+- **Records are matched by tax lot.** One lot can hold several buildings, in which case the counts cover all of them. When a lot has been renumbered, its records under the old number are included.
+- **Landlord portfolios are linked by name.** Buildings are grouped by the head officer's name and office ZIP, or by the managing agent's company name. This can occasionally group different people who share a name, or miss buildings registered under other names.
+- **This is information, not legal advice.** For help with a landlord, contact 311 or a tenant organization.
+
 ## Make targets
 
 Run `make help` prints the same list.

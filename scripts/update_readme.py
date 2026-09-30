@@ -1,4 +1,4 @@
-"""Regenerate the generated sections of README.md (agent flow, grades, make targets, tools).
+"""Regenerate the generated sections of README.md (agent flow, grades, data, make targets, tools).
 
 Each section lives between <!-- NAME:start --> and <!-- NAME:end --> markers.
 Usage: uv run python scripts/update_readme.py [--check]
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 import nyc_lease_lens.tools as tools_package
-from nyc_lease_lens import scoring
+from nyc_lease_lens import datasets, scoring
 from nyc_lease_lens.tools import TOOL_CLASSES
 from nyc_lease_lens.tools.base import Tool
 from nyc_lease_lens.tools.risk import ScoreBuildingRisk
@@ -85,7 +85,31 @@ def grades_table() -> str:
     return "\n".join(lines)
 
 
-SECTIONS = {"flow": flow_diagram, "grades": grades_table, "make": make_targets_table, "tools": tools_table}
+def data_table() -> str:
+    """Datasets from nyc_lease_lens.datasets, with the tools that declare them in data_sources."""
+    lines = ["| Dataset | Published by | Updated | What we use it for | Read by |", "| --- | --- | --- | --- | --- |"]
+    for dataset in datasets.ALL:
+        readers = [f"`{tool.name}`" for tool in TOOL_CLASSES if dataset in tool.data_sources]
+        if not readers:
+            logger.warning("dataset %s is in datasets.ALL but no tool lists it in data_sources", dataset.name)
+        lines.append(
+            f"| [{_escape(dataset.name)}]({dataset.url}) | {dataset.publisher} | {dataset.refreshed} "
+            f"| {_escape(dataset.used_for)} | {', '.join(readers) or '—'} |"
+        )
+    for tool in TOOL_CLASSES:
+        for dataset in tool.data_sources:
+            if dataset not in datasets.ALL:
+                logger.warning("%s reads %s, which is missing from datasets.ALL", tool.name, dataset.name)
+    return "\n".join(lines)
+
+
+SECTIONS = {
+    "flow": flow_diagram,
+    "grades": grades_table,
+    "data": data_table,
+    "make": make_targets_table,
+    "tools": tools_table,
+}
 
 
 def _discover_tools() -> list[type[Tool]]:
