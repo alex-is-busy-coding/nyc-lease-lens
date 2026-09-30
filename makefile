@@ -1,3 +1,7 @@
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
 
 UV_RUN := uv run --env-file .env
 
