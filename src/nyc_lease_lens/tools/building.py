@@ -4,8 +4,10 @@ import requests
 
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError
+from nyc_lease_lens.tools.violations import HPD_VIOLATIONS
 
 PLUTO = "64uk-42ks"
+HPD_BUILDINGS = "kj4p-ruqc"
 BOROUGHS = ["Manhattan", "Bronx", "Brooklyn", "Queens", "Staten Island"]
 
 
@@ -50,7 +52,7 @@ class LookupBuilding(Tool):
 
         place = candidates[0]
         del place["name"]
-        building, notes = self._building_facts(place["bbl"])
+        building, notes = self._building_facts(place["bbl"], place["bin"])
         if building:
             place["building"] = building
         if notes:
@@ -71,27 +73,39 @@ class LookupBuilding(Tool):
             and (not zip_code or c["zip"] == zip_code.group())
         ]
 
-    def _building_facts(self, bbl: str) -> tuple[dict | None, list[str]]:
+    def _building_facts(self, bbl: str, bin: str | None) -> tuple[dict | None, list[str]]:
+        notes = []
         try:
             rows = self.client.socrata(PLUTO, {"$where": f"bbl={bbl}"})
         except requests.RequestException as e:
-            return None, [f"Building facts unavailable: PLUTO lookup failed ({e})."]
-        if not rows:
-            return None, ["No PLUTO record for this lot (common for condos), so building facts are unavailable."]
+            rows = []
+            notes.append(f"PLUTO lookup failed ({e}).")
+        try:
+            apartments = hpd_apartments(self.client, bin) if bin else None
+        except requests.RequestException:
+            apartments = None
 
-        row = rows[0]
-        building = {
-            "year_built": _int(row.get("yearbuilt")) or None,  # PLUTO uses 0 for unknown
-            "floors": _int(row.get("numfloors")),
-            "residential_units": _int(row.get("unitsres")),
-            "total_units": _int(row.get("unitstotal")),
-            "building_class": row.get("bldgclass"),
-            "owner_of_record": row.get("ownername"),
-        }
-        notes = []
-        if building["residential_units"] == 0:
+        building = {}
+        if rows:
+            row = rows[0]
+            building = {
+                "year_built": _int(row.get("yearbuilt")) or None,  # PLUTO uses 0 for unknown
+                "floors": _int(row.get("numfloors")),
+                "residential_units_on_lot": _int(row.get("unitsres")),
+                "total_units_on_lot": _int(row.get("unitstotal")),
+                "building_class": row.get("bldgclass"),
+                "owner_of_record": row.get("ownername"),
+            }
+        elif not notes:
+            notes.append("No PLUTO record for this lot, so tax-lot facts are unavailable.")
+        if apartments:
+            building["apartments_in_building"] = apartments
+
+        if not apartments and building.get("residential_units_on_lot") == 0:
             notes.append("No residential units on record: this may not be an apartment building.")
-        return building, notes
+        elif apartments and rows and not building.get("residential_units_on_lot"):
+            notes.append("PLUTO's record for this lot looks outdated (it may have been renumbered).")
+        return building or None, notes
 
     @staticmethod
     def _candidate(feature: dict) -> dict | None:
@@ -110,6 +124,28 @@ class LookupBuilding(Tool):
             "latitude": lat,
             "longitude": lon,
         }
+
+
+def hpd_apartments(client: OpenDataClient, bin: str) -> int | None:
+    """Legal apartment count for one building from HPD's register. BINs survive lot renumbering."""
+    rows = client.socrata(HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"bin='{bin}' AND recordstatus='Active'"})
+    return sum(_int(r.get("legalclassa")) or 0 for r in rows) or None
+
+
+def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
+    """The BBL plus any older numbers for the same lot. HPD keeps the old block/lot on violations."""
+    rows = client.socrata(HPD_VIOLATIONS, {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"})
+    aliases = {bbl}
+    for r in rows:
+        if r.get("boroid") and r.get("block") and r.get("lot"):
+            aliases.add(f"{int(r['boroid'])}{int(r['block']):05d}{int(r['lot']):04d}")
+    return sorted(aliases)
+
+
+def hpd_units_on_lots(client: OpenDataClient, bbls: list[str]) -> int:
+    lots = " OR ".join(f"(boroid='{b[0]}' AND block='{int(b[1:6])}' AND lot='{int(b[6:])}')" for b in bbls)
+    rows = client.socrata(HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000})
+    return sum(_int(r.get("legalclassa")) or 0 for r in rows)
 
 
 def _int(value: str | None) -> int | None:
