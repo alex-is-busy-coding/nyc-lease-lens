@@ -4,6 +4,8 @@
 
 # NYC Lease Lens
 
+[![CI](https://github.com/alex-is-busy-coding/nyc-lease-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/alex-is-busy-coding/nyc-lease-lens/actions/workflows/ci.yml)
+
 An AI agent that checks any NYC apartment for red flags before you sign the lease.
 
 ## Quickstart
