@@ -56,6 +56,10 @@ The agent calls these tools to check a building. The table is generated from `sr
 | `get_311_complaints` | Summarize 311 complaints about a building (heat/hot water, pests, mold, leaks, noise, sanitation, repairs) and compare it with nearby buildings per apartment, as a percentile: 90 means more complaints per unit than 90% of nearby buildings. | `bbl` (string, required): 10-digit BBL from lookup_building<br>`latitude` (number, optional): Building latitude from lookup_building<br>`longitude` (number, optional): Building longitude from lookup_building<br>`categories` (string[], optional): Only report these categories. Omit for all. One of: `heat_hot_water`, `pests`, `mold`, `leaks_plumbing`, `noise`, `sanitation`, `repairs`.<br>`radius_m` (integer, optional, 50–500): Radius in meters for the nearby-building comparison. Default 150.<br>`months` (integer, optional, 1–60): How far back to count complaints. Default 24. |
 <!-- tools:end -->
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the commit checks and commit message format, and how to add a tool.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
