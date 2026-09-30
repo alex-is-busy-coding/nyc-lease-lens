@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from pathlib import Path
 
@@ -10,15 +11,17 @@ from pydantic import BaseModel
 
 from tools import TOOLS, run_tool
 
-# --- Config ---
-
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When a question depends on the weather or "
     "outdoor conditions, call get_weather first, then answer in a sentence."
 )
 MAX_TOOL_ROUNDS = 5
 
-# --- The Harness ---
+MODEL = os.getenv("MODEL", "vertex_ai/gemini-3.5-flash-lite")
+VERTEXAI_PROJECT = os.getenv("VERTEXAI_PROJECT")  # None: fall back to the gcloud ADC project
+VERTEXAI_LOCATION = os.getenv("VERTEXAI_LOCATION", "global")
+HOST = os.getenv("HOST", "127.0.0.1")
+PORT = int(os.getenv("PORT", "8000"))
 
 
 def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
@@ -30,8 +33,9 @@ def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
 
     for _ in range(MAX_TOOL_ROUNDS):
         reply = litellm.completion(
-            model="vertex_ai/gemini-3.5-flash-lite",
-            vertex_location="global",
+            model=MODEL,
+            vertex_project=VERTEXAI_PROJECT,
+            vertex_location=VERTEXAI_LOCATION,
             messages=messages,
             tools=TOOLS,
         ).choices[0].message
@@ -107,4 +111,4 @@ def clear(session_id: str | None = None):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=HOST, port=PORT)
