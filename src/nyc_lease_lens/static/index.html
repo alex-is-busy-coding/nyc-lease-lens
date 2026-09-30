@@ -95,8 +95,14 @@
                 letter-spacing: 0.05em;
                 color: #b45309;
             }
+            button.secondary {
+                background: #fff;
+                color: #000;
+                border: 1px solid #000;
+            }
             button:disabled {
                 opacity: 0.3;
+                cursor: default;
             }
         </style>
     </head>
@@ -111,13 +117,23 @@
                     autocomplete="off"
                 />
                 <button id="send-btn">Send</button>
+                <button id="clear-btn" class="secondary" title="Start a new conversation">Clear</button>
             </div>
         </div>
         <script>
             const messages = document.getElementById("messages");
             const userInput = document.getElementById("user-input");
             const sendBtn = document.getElementById("send-btn");
+            const clearBtn = document.getElementById("clear-btn");
             let sessionId = null;
+            let busy = false;
+
+            // Clearing mid-request would let the late reply restore the old session.
+            function setBusy(value) {
+                busy = value;
+                sendBtn.disabled = value;
+                clearBtn.disabled = value;
+            }
 
             function addMessage(role, text, isLoading = false) {
                 const div = document.createElement("div");
@@ -138,10 +154,10 @@
 
             async function send() {
                 const text = userInput.value.trim();
-                if (!text) return;
+                if (!text || busy) return;
 
                 userInput.value = "";
-                sendBtn.disabled = true;
+                setBusy(true);
                 addMessage("you", text);
                 const loading = addMessage("assistant", "Thinking...", true);
 
@@ -180,11 +196,28 @@
                         "Error: " + e.message;
                     loading.classList.remove("loading");
                 }
-                sendBtn.disabled = false;
+                setBusy(false);
                 userInput.focus();
             }
 
+            async function clearChat() {
+                if (busy) return;
+                const previous = sessionId;
+                sessionId = null;
+                messages.replaceChildren();
+                userInput.value = "";
+                userInput.focus();
+                if (!previous) return;
+                try {
+                    await fetch("/clear?session_id=" + encodeURIComponent(previous), { method: "POST" });
+                } catch (e) {
+                    // The screen is already cleared and the next message starts a new session.
+                    console.warn("Could not clear the session on the server:", e);
+                }
+            }
+
             sendBtn.addEventListener("click", send);
+            clearBtn.addEventListener("click", clearChat);
             userInput.addEventListener("keydown", function (e) {
                 if (e.key === "Enter") send();
             });
