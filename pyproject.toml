@@ -2,7 +2,7 @@
 name = "nyc-lease-lens"
 version = "0.1.0"
 description = "An AI agent that checks any NYC apartment for red flags before you sign the lease"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
