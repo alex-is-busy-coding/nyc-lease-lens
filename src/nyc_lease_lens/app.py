@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from tools import TOOLS, run_tool
+from nyc_lease_lens.tools import TOOLS, run_tool
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When a question depends on the weather or "
