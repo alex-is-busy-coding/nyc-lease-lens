@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,6 +14,10 @@ from nyc_lease_lens.tools import build_registry
 STATIC_DIR = Path(__file__).parent / "static"
 
 settings = get_settings()
+if settings.vertexai_project:
+    # Bill Vertex calls to our project; gcloud user credentials have no quota project by default.
+    os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", settings.vertexai_project)
+
 client = OpenDataClient(
     geosearch_url=settings.geosearch_url,
     socrata_url=settings.socrata_url,
