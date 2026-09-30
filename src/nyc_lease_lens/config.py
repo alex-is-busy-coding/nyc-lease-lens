@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     # NYC Open Data
     geosearch_url: str = "https://geosearch.planninglabs.nyc/v2/search"
     socrata_url: str = "https://data.cityofnewyork.us/resource/{dataset}.json"
-    opendata_timeout: float = Field(default=15, gt=0)
+    opendata_timeout: float = Field(default=20, gt=0)
+    opendata_retries: int = Field(default=2, ge=0)
 
 
 @lru_cache

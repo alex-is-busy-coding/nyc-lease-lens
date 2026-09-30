@@ -22,6 +22,7 @@ client = OpenDataClient(
     geosearch_url=settings.geosearch_url,
     socrata_url=settings.socrata_url,
     timeout=settings.opendata_timeout,
+    retries=settings.opendata_retries,
 )
 agent = Agent(
     tools=build_registry(client),

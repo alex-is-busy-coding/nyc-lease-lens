@@ -73,13 +73,14 @@ class GetHpdViolations(Tool):
             result["notes"] = ["No open HPD violations, and none issued in this period."]
             return result
 
-        rows = self._query({
+        notes = []
+        rows = self._optional_query(notes, "categories and examples", {
             "$select": "class, violationstatus, inspectiondate, novdescription, apartment, housenumber, streetname",
             "$where": where,
             "$order": "inspectiondate DESC",
             "$limit": MAX_ROWS,
         })
-        oldest = self._query({
+        oldest = self._optional_query(notes, "the oldest open violation", {
             "$select": "class, violationstatus, inspectiondate, novdescription, apartment",
             "$where": f"bbl='{bbl}' AND violationstatus='Open' AND class in ('B', 'C') AND inspectiondate IS NOT NULL",
             "$order": "inspectiondate ASC",
@@ -103,7 +104,6 @@ class GetHpdViolations(Tool):
             "latest_open_class_c": [_example(r) for r in open_rows if r.get("class") == "C"][:5],
         }
 
-        notes = []
         addresses = sorted({f"{r.get('housenumber', '')} {r.get('streetname', '')}".strip() for r in rows})
         if len(addresses) > 1:
             result["addresses_on_lot"] = addresses[:10]
@@ -121,6 +121,13 @@ class GetHpdViolations(Tool):
             return self.client.socrata(HPD_VIOLATIONS, params)
         except requests.RequestException as e:
             raise ToolError(f"HPD violations lookup failed: {e}") from e
+
+    def _optional_query(self, notes: list[str], what: str, params: dict) -> list[dict]:
+        try:
+            return self._query(params)
+        except ToolError:
+            notes.append(f"Could not load {what} (NYC Open Data was slow); the class counts are complete.")
+            return []
 
 
 def _categorize(description: str) -> str:
