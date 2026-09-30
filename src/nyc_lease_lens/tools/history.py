@@ -8,6 +8,7 @@ import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.rules import BEDBUG_PERIOD_FIRST_MONTH, BEDBUG_PERIODS, HISTORY_YEARS
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import lot_aliases
 
@@ -29,7 +30,6 @@ CASE_KINDS = {
     "Access Warrant - Non-Lead": "access_warrants",
     "Access Warrant - lead": "access_warrants",
 }
-BEDBUG_PERIODS = 3
 
 
 class GetTenantHistory(Tool):
@@ -54,21 +54,18 @@ class GetTenantHistory(Tool):
         "type": "object",
         "properties": {
             "bbl": {"type": "string", "description": "10-digit BBL from lookup_building"},
-            "years": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 20,
-                "description": "How far back to count evictions and court cases. Default 5. "
-                "Harassment findings and 7A administrators are reported from any year.",
-            },
+            "years": HISTORY_YEARS.schema(
+                "How far back to count evictions and court cases. "
+                "Harassment findings and 7A administrators are reported from any year."
+            ),
         },
         "required": ["bbl"],
     }
 
-    def run(self, bbl: str, years: int = 5) -> dict[str, Any]:
+    def run(self, bbl: str, years: int = HISTORY_YEARS.default) -> dict[str, Any]:
         if not re.fullmatch(r"\d{10}", bbl):
             raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
-        years = max(1, min(int(years), 20))
+        years = HISTORY_YEARS.clamp(years)
         today = date.today()
         since = date(today.year - years, today.month, min(today.day, 28)).isoformat()
 
@@ -239,7 +236,7 @@ def _due_bedbug_periods() -> list[str]:
     always started on Nov 1 two calendar years ago.
     """
     latest = date.today().year - 2
-    return [date(latest - i, 11, 1).isoformat() for i in range(BEDBUG_PERIODS)]
+    return [date(latest - i, BEDBUG_PERIOD_FIRST_MONTH, 1).isoformat() for i in range(BEDBUG_PERIODS)]
 
 
 def _int(value: str | None) -> int:

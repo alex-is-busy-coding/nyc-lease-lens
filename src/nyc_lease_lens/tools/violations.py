@@ -8,11 +8,11 @@ from typing import Any
 import requests
 
 from nyc_lease_lens import datasets
+from nyc_lease_lens.rules import VIOLATION_MONTHS, VIOLATION_SAMPLE_ROWS
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-MAX_ROWS = 5000
 CLASSES = ["C", "B", "A", "I"]
 
 CATEGORIES = [
@@ -46,20 +46,15 @@ class GetHpdViolations(Tool):
         "type": "object",
         "properties": {
             "bbl": {"type": "string", "description": "10-digit BBL from lookup_building"},
-            "months": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 120,
-                "description": "How far back to count violations, open or closed. Default 36.",
-            },
+            "months": VIOLATION_MONTHS.schema("How far back to count violations, open or closed."),
         },
         "required": ["bbl"],
     }
 
-    def run(self, bbl: str, months: int = 36) -> dict[str, Any]:
+    def run(self, bbl: str, months: int = VIOLATION_MONTHS.default) -> dict[str, Any]:
         if not re.fullmatch(r"\d{10}", bbl):
             raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
-        months = max(1, min(int(months), 120))
+        months = VIOLATION_MONTHS.clamp(months)
         since = date.today() - timedelta(days=round(months * 30.44))
 
         where = f"bbl='{bbl}' AND (inspectiondate >= '{since.isoformat()}' OR violationstatus='Open')"
@@ -85,7 +80,7 @@ class GetHpdViolations(Tool):
                 "$select": "class, violationstatus, inspectiondate, novdescription, apartment, housenumber, streetname",
                 "$where": where,
                 "$order": "inspectiondate DESC",
-                "$limit": MAX_ROWS,
+                "$limit": VIOLATION_SAMPLE_ROWS,
             },
         )
         oldest = self._optional_query(
@@ -121,8 +116,11 @@ class GetHpdViolations(Tool):
         if len(addresses) > 1:
             result["addresses_on_lot"] = addresses[:10]
             notes.append(f"This tax lot has {len(addresses)} addresses; counts cover all of them.")
-        if len(rows) >= MAX_ROWS:
-            notes.append(f"Class counts are exact; categories are based on the {MAX_ROWS} most recent violations only.")
+        if len(rows) >= VIOLATION_SAMPLE_ROWS:
+            notes.append(
+                f"Class counts are exact; categories are based on the {VIOLATION_SAMPLE_ROWS} "
+                "most recent violations only."
+            )
         if notes:
             result["notes"] = notes
         logger.debug(

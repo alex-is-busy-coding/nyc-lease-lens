@@ -7,12 +7,12 @@ import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.rules import PORTFOLIO_MAX_REGISTRATIONS
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-CHUNK = 300
-MAX_REGISTRATIONS = 3000
+CHUNK = 300  # IDs per query, to keep request URLs short
 
 
 class GetLandlordProfile(Tool):
@@ -94,8 +94,8 @@ class GetLandlordProfile(Tool):
                 result["management_portfolio"] = self._summarize(agent_regs, rate) | {
                     "linked_by": "same managing agent company"
                 }
-        if len(owner_ids) >= MAX_REGISTRATIONS or len(agent_ids) >= MAX_REGISTRATIONS:
-            notes.append(f"Portfolio capped at {MAX_REGISTRATIONS} registrations; totals are a lower bound.")
+        if len(owner_ids) >= PORTFOLIO_MAX_REGISTRATIONS or len(agent_ids) >= PORTFOLIO_MAX_REGISTRATIONS:
+            notes.append(f"Portfolio capped at {PORTFOLIO_MAX_REGISTRATIONS} registrations; totals are a lower bound.")
         if notes:
             result["notes"] = notes
         logger.debug(
@@ -112,7 +112,7 @@ class GetLandlordProfile(Tool):
     def _portfolio(self, where: str) -> tuple[set[str], list[dict]]:
         rows = self._query(
             datasets.HPD_CONTACTS.id,
-            {"$select": "distinct registrationid", "$where": where, "$limit": MAX_REGISTRATIONS},
+            {"$select": "distinct registrationid", "$where": where, "$limit": PORTFOLIO_MAX_REGISTRATIONS},
         )
         ids = {r["registrationid"] for r in rows}
         registrations = self._chunked(

@@ -9,6 +9,13 @@ import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.rules import (
+    COMPLAINT_MONTHS,
+    HEAT_SEASONS,
+    HEATING_SEASON_FIRST_MONTH,
+    HEATING_SEASON_LAST_MONTH,
+    NEIGHBOR_RADIUS_M,
+)
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import hpd_units_on_lots, lot_aliases
 
@@ -27,7 +34,6 @@ REPAIR_TYPES = {
     "ELEVATOR",
     "GENERAL CONSTRUCTION/PLUMBING",
 }
-HEAT_SEASONS = 3
 
 
 class Get311Complaints(Tool):
@@ -54,18 +60,8 @@ class Get311Complaints(Tool):
                 "items": {"type": "string", "enum": CATEGORIES},
                 "description": "Only report these categories. Omit for all.",
             },
-            "radius_m": {
-                "type": "integer",
-                "minimum": 50,
-                "maximum": 500,
-                "description": "Radius in meters for the nearby-building comparison. Default 150.",
-            },
-            "months": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 60,
-                "description": "How far back to count complaints. Default 24.",
-            },
+            "radius_m": NEIGHBOR_RADIUS_M.schema("Radius in meters for the nearby-building comparison."),
+            "months": COMPLAINT_MONTHS.schema("How far back to count complaints."),
         },
         "required": ["bbl"],
     }
@@ -76,14 +72,14 @@ class Get311Complaints(Tool):
         latitude: float | None = None,
         longitude: float | None = None,
         categories: list[str] | None = None,
-        radius_m: int = 150,
-        months: int = 24,
+        radius_m: int = NEIGHBOR_RADIUS_M.default,
+        months: int = COMPLAINT_MONTHS.default,
     ) -> dict[str, Any]:
         if not re.fullmatch(r"\d{10}", bbl):
             raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
         wanted = [c for c in categories or CATEGORIES if c in CATEGORIES] or CATEGORIES
-        radius_m = max(50, min(int(radius_m), 500))
-        months = max(1, min(int(months), 60))
+        radius_m = NEIGHBOR_RADIUS_M.clamp(radius_m)
+        months = COMPLAINT_MONTHS.clamp(months)
         since = (date.today() - timedelta(days=round(months * 30.44))).isoformat()
         compare = latitude is not None and longitude is not None
 
@@ -224,9 +220,12 @@ def _compare(counts: Counter, units: int | None, nearby: dict, all_units: dict, 
 
 
 def _season_start(seasons_ago: int = 0) -> date:
-    today = date.today()
-    start_year = today.year if today.month >= 10 else today.year - 1
-    return date(start_year - seasons_ago, 10, 1)
+    return date(_season_year(date.today()) - seasons_ago, HEATING_SEASON_FIRST_MONTH, 1)
+
+
+def _season_year(day: date) -> int:
+    """The year the heating season containing (or last before) this day started."""
+    return day.year if day.month >= HEATING_SEASON_FIRST_MONTH else day.year - 1
 
 
 def _heat_seasons(days: list[dict]) -> list[dict]:
@@ -240,9 +239,9 @@ def _heat_seasons(days: list[dict]) -> list[dict]:
         }
     for row in days:
         day = date.fromisoformat(row["day"][:10])
-        if 6 <= day.month <= 9:
-            continue
-        season = seasons.get(day.year if day.month >= 10 else day.year - 1)
+        if HEATING_SEASON_LAST_MONTH < day.month < HEATING_SEASON_FIRST_MONTH:
+            continue  # summer: not a heating-season complaint
+        season = seasons.get(_season_year(day))
         if season:
             season["complaints"] += int(row["n"])
             season["days_with_complaints"] += 1
