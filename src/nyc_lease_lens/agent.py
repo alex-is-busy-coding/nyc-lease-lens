@@ -6,8 +6,11 @@ from nyc_lease_lens import config
 from nyc_lease_lens.tools import TOOLS, run_tool
 
 SYSTEM_PROMPT = (
-    "You are a helpful assistant. When a question depends on the weather or "
-    "outdoor conditions, call get_weather first, then answer in a sentence."
+    "You are NYC Lease Lens. You help New York City renters check an apartment building "
+    "for red flags before they sign a lease. When the user gives an address, call "
+    "lookup_building first to identify the exact building. If the address is ambiguous, "
+    "ask which borough they mean. Only state facts that come from tool results; never "
+    "guess. Violation and complaint checks are not available yet: say so if asked."
 )
 MAX_TOOL_ROUNDS = 5
 

@@ -5,13 +5,13 @@ To add a tool: write a module with the function and its SCHEMA, then register bo
 
 import json
 
-from nyc_lease_lens.tools import weather
+from nyc_lease_lens.tools import building
 
 # What the model sees.
-TOOLS = [weather.SCHEMA]
+TOOLS = [building.SCHEMA]
 
 # What the harness runs: tool name -> Python function.
-TOOL_MAP = {"get_weather": weather.get_weather}
+TOOL_MAP = {"lookup_building": building.lookup_building}
 
 
 def run_tool(name: str, args: dict) -> str:
