@@ -37,3 +37,43 @@ jobs:
         run: uv run pre-commit run --all-files --show-diff-on-failure
         env:
           SKIP: readme-tables
+
+  commit-messages:
+    name: Conventional commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # Local commit-msg hooks can be skipped with --no-verify, so check new commits here too.
+      - name: Check commit messages
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            shas=$(git rev-list --no-merges "$BASE..$HEAD")
+          else
+            shas=$(jq -r '.commits[]?.id' "$GITHUB_EVENT_PATH")
+          fi
+          status=0
+          for sha in $shas; do
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/message"
+            if ! uv run --frozen --only-dev pre-commit run conventional-pre-commit --hook-stage commit-msg \
+                --commit-msg-filename "$RUNNER_TEMP/message" > /dev/null; then
+              echo "::error::$(git log -1 --format='%h "%s"' "$sha") is not a conventional commit (type(scope): summary)"
+              status=1
+            fi
+          done
+          echo "Checked $(echo "$shas" | grep -c .) commit(s)."
+          exit $status
