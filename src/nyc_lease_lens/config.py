@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     model: str = "vertex_ai/gemini-3.5-flash-lite"
     vertexai_project: str | None = None  # None: fall back to the gcloud ADC project
     vertexai_location: str = "global"
-    max_tool_rounds: int = Field(default=5, ge=1)
+    max_tool_rounds: int = Field(default=8, ge=1)
 
     # Server
     host: str = "127.0.0.1"
