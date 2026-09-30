@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from nyc_lease_lens.agent import Agent
 from nyc_lease_lens.config import get_settings
@@ -54,6 +55,7 @@ logger.info(
 )
 
 app = FastAPI(title="NYC Lease Lens")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.middleware("http")
