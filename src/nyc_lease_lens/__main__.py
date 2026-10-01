@@ -9,7 +9,8 @@ def main() -> None:
     configure_logging(settings.logging.level, settings.logging.format)
     server = settings.server
     uvicorn.run(
-        "nyc_lease_lens.app:app",
+        "nyc_lease_lens.app:create_app",
+        factory=True,
         host=server.host,
         port=server.port,
         reload=server.reload,

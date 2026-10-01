@@ -23,7 +23,7 @@ The NYC Open Data tools need no API key, so you can work on them without Google 
 
 ```
 src/nyc_lease_lens/
-  app.py          FastAPI routes; wires settings, client, tools and agent together
+  app.py          create_app(): builds the FastAPI app from settings; routes get the agent and sessions via Depends
   agent.py        system prompt and the tool-calling loop
   config.py       Settings (pydantic-settings)
   opendata.py     HTTP client for NYC GeoSearch and Socrata, with retries
@@ -31,6 +31,14 @@ src/nyc_lease_lens/
   tools/          one module per tool, registered in tools/__init__.py
 scripts/          developer scripts (README table generator)
 .github/workflows CI checks and README table updates
+```
+
+Importing a module has no side effects: nothing reads settings or builds clients until `create_app()` runs. In tests, build an app with fakes in one line and use FastAPI's `TestClient` (the `with` block runs startup and shutdown):
+
+```python
+app = create_app(Settings(), agent=FakeAgent())
+with TestClient(app) as http:
+    assert http.post("/chat", json={"message": "hi"}).status_code == 200
 ```
 
 ## Checks on every commit

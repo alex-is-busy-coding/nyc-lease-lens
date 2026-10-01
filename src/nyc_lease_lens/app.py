@@ -3,59 +3,91 @@ import os
 import re
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from nyc_lease_lens.agent import Agent
-from nyc_lease_lens.config import get_settings
+from nyc_lease_lens.config import LLMSettings, Settings, get_settings
 from nyc_lease_lens.context import request_id
-from nyc_lease_lens.log import configure_logging
+from nyc_lease_lens.log import configure_logging, ms_since
 from nyc_lease_lens.opendata import OpenDataClient
 from nyc_lease_lens.schemas import ChatRequest, ChatResponse
 from nyc_lease_lens.sessions import SessionStore
 from nyc_lease_lens.tools import build_registry
 
 STATIC_DIR = Path(__file__).parent / "static"
-
-settings = get_settings()
-configure_logging(settings.logging.level, settings.logging.format)
 logger = logging.getLogger(__name__)
 
-llm = settings.llm
-if llm.vertexai_project:
+
+def create_app(
+    settings: Settings | None = None,
+    *,
+    client: OpenDataClient | None = None,
+    agent: Agent | None = None,
+) -> FastAPI:
+    """Build the app. Tests can pass their own settings, Open Data client or agent."""
+    settings = settings or get_settings()
+    configure_logging(settings.logging.level, settings.logging.format)
+    _use_vertex_project(settings.llm)
+
+    client = client or OpenDataClient.from_settings(settings.opendata)
+    agent = agent or Agent(
+        tools=build_registry(client),
+        model=settings.llm.model,
+        vertex_project=settings.llm.vertexai_project,
+        vertex_location=settings.llm.vertexai_location,
+        max_tool_rounds=settings.llm.max_tool_rounds,
+    )
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        logger.info(
+            "app ready",
+            extra={
+                "model": agent.model,
+                "tools": len(agent.tools.schemas),
+                "max_tool_rounds": agent.max_tool_rounds,
+                "opendata_timeout": client.timeout,
+            },
+        )
+        yield
+        client.http.close()
+        logger.info("app stopped")
+
+    app = FastAPI(title="NYC Lease Lens", lifespan=lifespan)
+    app.state.agent = agent
+    app.state.sessions = SessionStore(agent.system_prompt)
+    app.middleware("http")(log_requests)
+    app.include_router(router)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    return app
+
+
+def _use_vertex_project(llm: LLMSettings) -> None:
     # Bill Vertex calls to our project; gcloud user credentials have no quota project by default.
-    os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", llm.vertexai_project)
-    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", llm.vertexai_project)
-
-client = OpenDataClient.from_settings(settings.opendata)
-agent = Agent(
-    tools=build_registry(client),
-    model=llm.model,
-    vertex_project=llm.vertexai_project,
-    vertex_location=llm.vertexai_location,
-    max_tool_rounds=llm.max_tool_rounds,
-)
-sessions = SessionStore(agent.system_prompt)
-logger.info(
-    "app ready",
-    extra={
-        "model": llm.model,
-        "vertex_location": llm.vertexai_location,
-        "tools": len(agent.tools.schemas),
-        "max_tool_rounds": llm.max_tool_rounds,
-        "opendata_timeout": settings.opendata.timeout,
-    },
-)
-
-app = FastAPI(title="NYC Lease Lens")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    if llm.vertexai_project:
+        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", llm.vertexai_project)
+        os.environ.setdefault("GOOGLE_CLOUD_PROJECT", llm.vertexai_project)
 
 
-@app.middleware("http")
+def get_agent(request: Request) -> Agent:
+    return request.app.state.agent
+
+
+def get_sessions(request: Request) -> SessionStore:
+    return request.app.state.sessions
+
+
+AgentDep = Annotated[Agent, Depends(get_agent)]
+SessionsDep = Annotated[SessionStore, Depends(get_sessions)]
+
+
 async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     """Tag everything logged during a request with one ID, returned to the client as X-Request-ID."""
     incoming = request.headers.get("x-request-id", "")
@@ -75,7 +107,7 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
                 "method": request.method,
                 "path": request.url.path,
                 "status": response.status_code,
-                "duration_ms": round((time.perf_counter() - start) * 1000),
+                "duration_ms": ms_since(start),
             },
         )
         return response
@@ -83,19 +115,22 @@ async def log_requests(request: Request, call_next: Callable[[Request], Awaitabl
         request_id.reset(token)
 
 
-@app.get("/")
-def index():
+router = APIRouter()
+
+
+@router.get("/")
+def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
-    session_id, messages = sessions.get_or_create(request.session_id)
-    logger.info("chat", extra={"session_id": session_id, "turn": len(messages), "message_chars": len(request.message)})
-    logger.debug("chat message", extra={"text": request.message})
+@router.post("/chat", response_model=ChatResponse)
+def chat(body: ChatRequest, agent: AgentDep, sessions: SessionsDep) -> ChatResponse:
+    session_id, messages = sessions.get_or_create(body.session_id)
+    logger.info("chat", extra={"session_id": session_id, "turn": len(messages), "message_chars": len(body.message)})
+    logger.debug("chat message", extra={"text": body.message})
 
     # Append user's message to the context
-    messages += [{"role": "user", "content": request.message}]
+    messages += [{"role": "user", "content": body.message}]
 
     try:
         response, tool_calls = agent.run(messages)
@@ -106,8 +141,8 @@ def chat(request: ChatRequest):
     return ChatResponse(response=response, session_id=session_id, tool_calls=tool_calls)
 
 
-@app.post("/clear")
-def clear(session_id: str | None = None):
+@router.post("/clear")
+def clear(sessions: SessionsDep, session_id: str | None = None) -> dict[str, str]:
     sessions.clear(session_id)
     logger.info("session cleared", extra={"session_id": session_id})
     return {"status": "ok"}
