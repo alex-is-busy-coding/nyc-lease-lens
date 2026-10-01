@@ -44,14 +44,9 @@ def run_case(case: Case, agent: Agent) -> Transcript:
         turn = Turn(user=text)
         transcript.turns.append(turn)
         messages.append({"role": "user", "content": text})
-        before = len(messages)
-
-        def attempt(before: int = before) -> tuple[str, list[dict]]:
-            del messages[before:]  # a rate-limited attempt may have added half a turn
-            return agent.run(messages)
-
         try:
-            turn.answer, turn.tool_calls = with_retries(attempt)
+            # A failed attempt adds nothing to messages, so retrying is safe.
+            turn.answer, turn.tool_calls = with_retries(lambda: agent.run(messages))
         except Exception as e:  # a crash is a result to report, not a reason to stop the run
             turn.error = f"{type(e).__name__}: {str(e)[:300]}"
             break

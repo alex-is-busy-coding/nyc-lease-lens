@@ -32,12 +32,14 @@ def tool_call(name, args, call_id="call_1"):
 
 @pytest.fixture
 def model(monkeypatch):
-    """A fake model: returns the queued replies in order and records every request."""
+    """A fake model: returns the queued replies in order (raising queued exceptions) and records every request."""
     fake = SimpleNamespace(replies=[], requests=[])
 
     def completion(**kwargs):
         fake.requests.append({**kwargs, "messages": list(kwargs["messages"])})
-        return fake.replies.pop(0)
+        if isinstance(next_reply := fake.replies.pop(0), Exception):
+            raise next_reply
+        return next_reply
 
     monkeypatch.setattr(loop.litellm, "completion", completion)
     return fake
@@ -84,9 +86,40 @@ def test_sends_the_configured_model_and_vertex_settings(model):
 
 def test_stops_after_the_round_limit(model):
     model.replies = [reply(tool_calls=[tool_call("lookup_building", {"address": "x"}, f"call_{i}")]) for i in range(3)]
-    answer, calls = make_agent(max_tool_rounds=3).run([{"role": "user", "content": "loop forever"}])
+    messages = [{"role": "user", "content": "loop forever"}]
+    answer, calls = make_agent(max_tool_rounds=3).run(messages)
     assert answer == "Sorry, I hit my tool-call limit before finishing."
     assert len(calls) == 3 and len(model.requests) == 3
+    # Every tool call keeps its result, and the history ends on an answer the next turn can follow.
+    assert messages[-2]["role"] == "tool" and messages[-1] == {"role": "assistant", "content": answer}
+
+
+def test_a_failure_mid_turn_leaves_the_history_unchanged(model):
+    model.replies = [
+        reply(tool_calls=[tool_call("lookup_building", {"address": "157 Ludlow St"})]),
+        TimeoutError("model timed out"),
+    ]
+    messages = [{"role": "system", "content": "prompt"}, {"role": "user", "content": "Check 157 Ludlow St"}]
+    with pytest.raises(TimeoutError):
+        make_agent().run(messages)
+    # No dangling tool call: the caller can retry or carry on.
+    assert messages == [{"role": "system", "content": "prompt"}, {"role": "user", "content": "Check 157 Ludlow St"}]
+
+
+@pytest.mark.parametrize("arguments", ['{"address": "157 Ludl', '["157 Ludlow St"]'])
+def test_malformed_arguments_are_reported_back_to_the_model(model, arguments):
+    call = SimpleNamespace(id="call_1", function=SimpleNamespace(name="lookup_building", arguments=arguments))
+    model.replies = [reply(tool_calls=[call]), reply(content="Let me try again.")]
+    answer, calls = make_agent().run([{"role": "user", "content": "hi"}])
+    assert answer == "Let me try again."
+    assert calls[0]["args"] == {} and "error" in json.loads(calls[0]["result"])
+
+
+def test_empty_arguments_mean_none_were_given(model):
+    call = SimpleNamespace(id="call_1", function=SimpleNamespace(name="lookup_building", arguments=""))
+    model.replies = [reply(tool_calls=[call]), reply(content="Which address?")]
+    _, calls = make_agent().run([{"role": "user", "content": "hi"}])
+    assert calls[0]["args"] == {} and "Bad arguments" in json.loads(calls[0]["result"])["error"]
 
 
 def test_unknown_tools_are_reported_back_to_the_model(model):

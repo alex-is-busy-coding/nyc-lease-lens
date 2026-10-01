@@ -125,6 +125,14 @@ def test_agent_failures_become_a_message_not_a_500():
     assert response.headers["X-Request-ID"] in answer  # so a user's report can be matched to the logs
 
 
+def test_a_failed_turn_is_not_kept_in_the_session(http, agent):
+    agent.fail = True
+    session_id = http.post("/chat", json={"message": "lost"}).json()["session_id"]
+    agent.fail = False
+    http.post("/chat", json={"message": "retry", "session_id": session_id})
+    assert agent.histories[-1] == ["test prompt", "retry"]
+
+
 @pytest.mark.parametrize(
     ("sent", "kept"),
     [("abc-123", True), ("", False), ("has spaces", False), ("x" * 65, False)],
