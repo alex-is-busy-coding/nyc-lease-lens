@@ -32,7 +32,7 @@ class LookupBuilding(Tool):
             "borough": {
                 "type": "string",
                 "enum": BOROUGHS,
-                "description": "Borough, if the user mentioned it or it is clear from context.",
+                "description": "Only if the user named the borough or gave a ZIP code. Never guess it.",
             },
         },
         "required": ["address"],
