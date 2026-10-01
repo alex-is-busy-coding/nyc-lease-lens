@@ -218,7 +218,23 @@ button:disabled {
     color: #92400e;
 }
 
-/* What the agent checked, collapsed under the answer */
+/* Where the answer comes from */
+.sources {
+    margin-top: 0.9rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid #eee;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #666;
+}
+.sources p + p {
+    margin-top: 0.25rem;
+}
+.sources a {
+    color: inherit;
+}
+
+/* The raw tool calls, only with ?debug=1 */
 details.checks {
     margin-top: 0.75rem;
     font-size: 0.8rem;

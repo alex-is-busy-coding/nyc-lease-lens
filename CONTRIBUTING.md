@@ -157,7 +157,7 @@ These come from problems we hit with NYC Open Data:
 
 ### Data sources
 
-Every dataset is defined once in `src/nyc_lease_lens/data/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
+Every dataset is defined once in `src/nyc_lease_lens/data/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us, and a short `label` for the chat page's sources footer) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
 
 ## Testing
 
@@ -212,6 +212,8 @@ The page is plain HTML, CSS and JavaScript in `src/nyc_lease_lens/static/`, serv
 
 - **Never insert text as HTML.** Messages, errors and tool results go in with `textContent`. The only exception is the agent's Markdown answer, which `marked` turns into HTML and `DOMPurify` sanitizes, with images and forms removed. A test fails if `app.js` assigns `innerHTML` any other way.
 - **The grade card** comes from the structured `score_building_risk` result in the `/chat` response, not from the model's text, so it always shows the real grade and points.
+- **The sources footer** lists the datasets behind each answer. `/chat` builds it from the tools that ran (each tool's `sources()`, which defaults to its `data_sources`), so it stays accurate when tools change.
+- **Raw tool calls are for developers:** open the page as `/?debug=1` to see them under each answer.
 - **Libraries come from a CDN, pinned to an exact version with an `integrity` hash.** To upgrade one, change the version and replace the hash:
   `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
   If the CDN is unreachable, answers fall back to plain text.

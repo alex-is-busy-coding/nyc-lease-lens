@@ -2,6 +2,8 @@ import json
 
 import pytest
 
+from nyc_lease_lens.data import datasets
+from nyc_lease_lens.tools import build_registry
 from nyc_lease_lens.tools.base import Tool, ToolError, ToolRegistry
 
 
@@ -52,6 +54,15 @@ def test_schema_is_what_the_model_sees(registry):
             "function": {"name": "echo", "description": Echo.description, "parameters": Echo.parameters},
         }
     ]
+
+
+def test_sources_cover_the_tools_that_ran_without_duplicates():
+    registry = build_registry(None)
+    assert registry.sources_for([]) == registry.sources_for(["unknown_tool"]) == []
+    every = registry.sources_for(["score_building_risk"])
+    assert every == list(datasets.ALL)  # the full check reads every registered dataset
+    assert registry.sources_for(["get_hpd_violations", "score_building_risk"])[0] == datasets.HPD_VIOLATIONS
+    assert len(registry.sources_for(["get_hpd_violations", "score_building_risk"])) == len(every)
 
 
 @pytest.mark.parametrize(("value", "ok"), [("1004117502", True), ("100411750", False), ("abc", False)])

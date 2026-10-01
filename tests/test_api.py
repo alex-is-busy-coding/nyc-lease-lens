@@ -93,6 +93,16 @@ def test_chat_keeps_history_per_session(http, agent):
     assert agent.histories[-1] == ["test prompt", "hello", "again"]
 
 
+def test_chat_lists_the_sources_behind_the_answer(http):
+    sources = http.post("/chat", json={"message": "hello"}).json()["sources"]  # the fake agent ran lookup_building
+    assert [s["name"] for s in sources] == ["NYC GeoSearch", "Tax lot records (PLUTO)", "HPD building register"]
+    assert sources[1] == {
+        "name": "Tax lot records (PLUTO)",
+        "url": "https://data.cityofnewyork.us/d/64uk-42ks",
+        "updated": "Quarterly",
+    }
+
+
 def test_clear_starts_the_session_over(http, agent):
     session_id = http.post("/chat", json={"message": "hello"}).json()["session_id"]
     assert http.post(f"/clear?session_id={session_id}").json() == {"status": "ok"}

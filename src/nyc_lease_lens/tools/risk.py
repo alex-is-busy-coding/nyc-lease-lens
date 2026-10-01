@@ -5,6 +5,7 @@ from typing import Any
 
 from nyc_lease_lens import scoring
 from nyc_lease_lens.data.client import OpenDataClient
+from nyc_lease_lens.data.datasets import Dataset
 from nyc_lease_lens.observability.context import ContextThreadPoolExecutor
 from nyc_lease_lens.observability.log import ms_since
 from nyc_lease_lens.tools.base import Tool, ToolError
@@ -61,6 +62,11 @@ class ScoreBuildingRisk(Tool):
         super().__init__(client)
         self.lookup = self.lookup_tool(client)
         self.check_tools = {name: tool(client) for name, (tool, _) in self.checks.items()}
+
+    def sources(self) -> tuple[Dataset, ...]:
+        """The lookup's datasets plus every check's, deduplicated."""
+        tools = [self.lookup, *self.check_tools.values()]
+        return tuple(dict.fromkeys(dataset for tool in tools for dataset in tool.sources()))
 
     def run(self, address: str, borough: str | None = None) -> dict[str, Any]:
         building = self.lookup.run(address=address, borough=borough)

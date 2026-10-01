@@ -88,7 +88,33 @@ function renderGradeCard(result) {
     return card;
 }
 
-// --- What the agent checked, collapsed under the answer ---
+// --- Where the answer comes from, under the answer ---
+
+function renderSources(sources, grade) {
+    const footer = el("footer", "sources");
+    const line = el("p");
+    line.append(el("strong", "", "Sources: "));
+    sources.forEach((source, i) => {
+        if (i) line.append(" · ");
+        const link = el("a", "", source.name);
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.title = `Updated ${source.updated.toLowerCase()} by the publisher`;
+        line.append(link);
+    });
+    line.append(" — NYC Open Data, fetched when you asked.");
+    footer.append(line);
+    if (grade && grade.bbl) {
+        // The city's IDs for the building, so readers can look it up themselves.
+        footer.append(el("p", "", `Building: BBL ${grade.bbl}${grade.bin ? ` · BIN ${grade.bin}` : ""}`));
+    }
+    return footer;
+}
+
+// --- The raw tool calls, for developers: open the page with ?debug=1 ---
+
+const DEBUG = new URLSearchParams(location.search).has("debug");
 
 function renderChecks(toolCalls) {
     const details = el("details", "checks");
@@ -132,7 +158,8 @@ async function send() {
         content.replaceChildren();
         if (grade) content.append(renderGradeCard(grade));
         content.append(renderMarkdown(data.response || ""));
-        if (toolCalls.length) content.append(renderChecks(toolCalls));
+        if (data.sources && data.sources.length) content.append(renderSources(data.sources, grade));
+        if (DEBUG && toolCalls.length) content.append(renderChecks(toolCalls));
     } catch (e) {
         content.textContent = `Something went wrong: ${e.message}. Please try again.`;
     }

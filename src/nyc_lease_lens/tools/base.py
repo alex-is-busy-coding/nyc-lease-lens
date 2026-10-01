@@ -3,7 +3,7 @@ import logging
 import re
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any, TypeVar
 
 import requests
@@ -41,6 +41,10 @@ class Tool(ABC):
     @abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]: ...
 
+    def sources(self) -> tuple[Dataset, ...]:
+        """Every dataset a call to this tool can read, for the chat page's sources footer."""
+        return self.data_sources
+
     def query(self, dataset: Dataset, params: dict) -> list[dict]:
         """Run a SoQL query. A failed request becomes a ToolError the model can explain."""
         return self.fetch(self.client.socrata, dataset, params)
@@ -76,6 +80,15 @@ class ToolRegistry:
     @property
     def schemas(self) -> list[dict]:
         return [tool.schema for tool in self._tools.values()]
+
+    def sources_for(self, tool_names: Iterable[str]) -> list[Dataset]:
+        """The datasets behind a set of tool calls, deduplicated, in the order the tools ran."""
+        found: dict[str, Dataset] = {}
+        for name in tool_names:
+            if tool := self._tools.get(name):
+                for dataset in tool.sources():
+                    found.setdefault(dataset.id, dataset)
+        return list(found.values())
 
     def run(self, name: str, args: dict) -> str:
         """Run one tool call. Models invent tool names and arguments; never let that crash the loop."""
