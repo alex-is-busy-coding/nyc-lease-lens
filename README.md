@@ -70,7 +70,37 @@ Each red flag adds points, and the total is capped at 100:
 | F | 70–100 |
 <!-- grades:end -->
 
-The exact weights are in [src/nyc_lease_lens/scoring.py](src/nyc_lease_lens/scoring.py).
+#### Weights
+
+Each red flag below adds the points shown. Where there are levels, the highest one reached counts. This table is generated from the rules in [src/nyc_lease_lens/scoring.py](src/nyc_lease_lens/scoring.py).
+
+<!-- weights:start -->
+| Red flag | Points | Source |
+| --- | --- | --- |
+| Open class C (immediately hazardous) violations | 30 at 50+ per 100 apartments, 20 at 20+, 12 at 5+, otherwise 5; but no more than by count: 30 at 20+, 20 at 5+, 12 at 2+, 5 at 1+ | HPD violations |
+| Open rent-impairing violations | 10 at 5+ per 100 apartments; or by count: 10 at 20+, 5 at 1+ | HPD violations |
+| Oldest open hazardous violation | 8 at 5+ years open, 5 at 1+ years | HPD violations |
+| Open illegal-occupancy violations | 10 | HPD violations |
+| Open class C lead paint violations | 5 | HPD violations |
+| Noise complaints compared with nearby buildings | 3 at 95+ percentile | 311 complaints |
+| Heat, pest, mold and leak complaints compared with nearby buildings, per category | 6 at 95+ percentile, 3 at 80+; 18 at most in total | 311 complaints |
+| Days with heat complaints in the worse of the last two winters | 12 at 60+ days, 6 at 20+ | 311 complaints |
+| Winters with 20+ days of heat complaints | 4 at 2+ winters | 311 complaints |
+| Not registered with HPD | 5 at 3+ apartments | HPD registrations |
+| HPD registration lapsed | 5 | HPD registrations |
+| Landlord's hazardous violation rate compared with the city | 10 at 2x+ the citywide rate, 5 at 1.25x+ | HPD registrations |
+| Landlord's buildings in the Alternative Enforcement Program | 5 | HPD registrations |
+| Entire-building vacate order in effect | 30 | HPD vacate orders |
+| Partial vacate order in effect | 20 | HPD vacate orders |
+| Harassment finding in the last 10 years | 25 | HPD litigation |
+| Harassment finding over 10 years ago | 10 | HPD litigation |
+| Court-appointed administrator in the last 10 years | 15 | HPD litigation |
+| Court-appointed administrator over 10 years ago | 5 | HPD litigation |
+| Landlord certified repairs that weren't made | 8 | HPD litigation |
+| Evictions | 8 at 2+ per 100 apartments a year, 4 at 1+ | Marshal evictions |
+| Missing required bedbug reports | 4 | HPD bedbug reports |
+| Apartments with bedbugs in the latest report | 5 at 5%+ of apartments | HPD bedbug reports |
+<!-- weights:end -->
 
 ## Data
 

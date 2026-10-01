@@ -147,6 +147,22 @@ These come from problems we hit with NYC Open Data:
 
 Every dataset is defined once in `src/nyc_lease_lens/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
 
+## Changing the score
+
+Every red flag is a `Rule` in `RULES` in `src/nyc_lease_lens/scoring.py`. A rule has:
+- **what it measures**, and the source it comes from
+- **a `find` function** that reads the check results and returns `Hit`s: a value plus the text shown to the user
+- **`tiers` of `(at least, points)`**, highest first
+- optionally **`count_tiers`** (combined by `lower` or `higher`) and a **`cap`** on the rule's total points
+
+Good signs are listed separately in `GOOD_SIGNS`.
+
+- **To change a weight,** edit the rule's tiers. `make docs` updates the README's weights table.
+- **To add a red flag,** write a small `find` function and add a `Rule`. Its position in `RULES` decides the order of findings that tie on points.
+- Pass `today=` to `score()` in tests, so the rules about recent years give the same result every time.
+
+Changing a weight changes grades users see, so mention the change and why in the commit message.
+
 ## Logging
 
 Use the standard library logger, never `print` (ruff's `T20` rule rejects it):

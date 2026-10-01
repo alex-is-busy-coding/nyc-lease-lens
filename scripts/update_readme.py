@@ -1,4 +1,4 @@
-"""Regenerate the generated sections of README.md (agent flow, grades, data, make targets, tools).
+"""Regenerate the generated sections of README.md (agent flow, grades, weights, data, make targets, tools).
 
 Each section lives between <!-- NAME:start --> and <!-- NAME:end --> markers.
 Usage: uv run python scripts/update_readme.py [--check]
@@ -85,6 +85,14 @@ def grades_table() -> str:
     return "\n".join(lines)
 
 
+def weights_table() -> str:
+    """Every scoring rule with its points, in the order findings are listed when points tie."""
+    lines = ["| Red flag | Points | Source |", "| --- | --- | --- |"]
+    for rule in scoring.RULES:
+        lines.append(f"| {_escape(rule.signal)} | {_escape(scoring.describe_points(rule))} | {rule.source} |")
+    return "\n".join(lines)
+
+
 def data_table() -> str:
     """Datasets from nyc_lease_lens.datasets, with the tools that declare them in data_sources."""
     lines = ["| Dataset | Published by | Updated | What we use it for | Read by |", "| --- | --- | --- | --- | --- |"]
@@ -106,6 +114,7 @@ def data_table() -> str:
 SECTIONS = {
     "flow": flow_diagram,
     "grades": grades_table,
+    "weights": weights_table,
     "data": data_table,
     "make": make_targets_table,
     "tools": tools_table,
