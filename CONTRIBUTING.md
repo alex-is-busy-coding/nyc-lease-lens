@@ -161,7 +161,7 @@ Every dataset is defined once in `src/nyc_lease_lens/data/datasets.py`, and the 
 
 ## Testing
 
-`make test` runs the suite offline in a few seconds; CI runs it on every push.
+`make test` runs the suite offline in a few seconds; CI runs it on every push. `make coverage` adds a line and branch coverage report (and an HTML version in `htmlcov/`). CI fails if coverage drops below 90%; when you add code, add tests with it rather than lowering that bar.
 
 | File | Covers |
 | --- | --- |

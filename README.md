@@ -159,6 +159,7 @@ Run `make help` prints the same list.
 | `make format` | Auto-format and fix lint issues with ruff | — |
 | `make typecheck` | Type-check with mypy | — |
 | `make test` | Run the test suite (offline, a few seconds) | — |
+| `make coverage` | Run the tests with a coverage report (HTML in htmlcov/) | — |
 | `make check` | Run every pre-commit hook on all files | — |
 | `make docs` | Regenerate the make targets and tools tables in README.md | — |
 | `make clean` | Remove the virtualenv and caches | — |

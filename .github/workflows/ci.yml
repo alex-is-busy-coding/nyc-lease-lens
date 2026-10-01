@@ -39,7 +39,7 @@ jobs:
           SKIP: readme-tables
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run pytest --cov --cov-report=term
 
   commit-messages:
     name: Conventional commit messages
