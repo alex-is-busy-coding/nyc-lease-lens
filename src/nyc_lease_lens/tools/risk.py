@@ -4,9 +4,9 @@ from collections.abc import Callable
 from typing import Any
 
 from nyc_lease_lens import scoring
-from nyc_lease_lens.context import ContextThreadPoolExecutor
-from nyc_lease_lens.log import ms_since
-from nyc_lease_lens.opendata import OpenDataClient
+from nyc_lease_lens.data.client import OpenDataClient
+from nyc_lease_lens.observability.context import ContextThreadPoolExecutor
+from nyc_lease_lens.observability.log import ms_since
 from nyc_lease_lens.tools.base import Tool, ToolError
 from nyc_lease_lens.tools.building import BOROUGHS, LookupBuilding
 from nyc_lease_lens.tools.complaints import Get311Complaints

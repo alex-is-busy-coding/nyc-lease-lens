@@ -4,9 +4,9 @@ from typing import Any
 
 import requests
 
-from nyc_lease_lens import datasets
-from nyc_lease_lens.opendata import OpenDataClient
-from nyc_lease_lens.parsing import to_int
+from nyc_lease_lens.data import datasets
+from nyc_lease_lens.data.client import OpenDataClient
+from nyc_lease_lens.data.parsing import to_int
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)

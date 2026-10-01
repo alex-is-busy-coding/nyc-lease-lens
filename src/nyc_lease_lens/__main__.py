@@ -1,7 +1,7 @@
 import uvicorn
 
 from nyc_lease_lens.config import get_settings
-from nyc_lease_lens.log import configure_logging
+from nyc_lease_lens.observability.log import configure_logging
 
 
 def main() -> None:
@@ -9,7 +9,7 @@ def main() -> None:
     configure_logging(settings.logging.level, settings.logging.format)
     server = settings.server
     uvicorn.run(
-        "nyc_lease_lens.app:create_app",
+        "nyc_lease_lens.api.app:create_app",
         factory=True,
         host=server.host,
         port=server.port,

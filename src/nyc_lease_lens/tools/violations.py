@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from datetime import date, timedelta
 from typing import Any
 
-from nyc_lease_lens import datasets
+from nyc_lease_lens.data import datasets
 from nyc_lease_lens.rules import VIOLATION_MONTHS, VIOLATION_SAMPLE_ROWS
 from nyc_lease_lens.tools.base import Tool, ToolError
 

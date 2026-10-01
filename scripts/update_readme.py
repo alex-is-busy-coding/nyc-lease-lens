@@ -14,7 +14,8 @@ import sys
 from pathlib import Path
 
 import nyc_lease_lens.tools as tools_package
-from nyc_lease_lens import datasets, scoring
+from nyc_lease_lens import scoring
+from nyc_lease_lens.data import datasets
 from nyc_lease_lens.tools import TOOL_CLASSES
 from nyc_lease_lens.tools.base import Tool
 from nyc_lease_lens.tools.risk import ScoreBuildingRisk
@@ -67,7 +68,7 @@ def flow_diagram() -> str:
         lines.append(f'    parallel --> {key}["{tool.name}"]')
     lines.append(f"    {' & '.join(risk.checks)} --> scoring")
     lines += [
-        '    scoring["scoring.py<br/>points → 0-100 score → grade A-F"]',
+        '    scoring["scoring rules<br/>points → 0-100 score → grade A-F"]',
         '    scoring --> report["grade, score, red flags, good signs, data gaps"]',
         "    report --> agent",
         '    agent --> answer(["Answer: grade, then red flags by weight"])',
@@ -94,7 +95,7 @@ def weights_table() -> str:
 
 
 def data_table() -> str:
-    """Datasets from nyc_lease_lens.datasets, with the tools that declare them in data_sources."""
+    """Datasets from nyc_lease_lens.data.datasets, with the tools that declare them in data_sources."""
     lines = ["| Dataset | Published by | Updated | What we use it for | Read by |", "| --- | --- | --- | --- | --- |"]
     for dataset in datasets.ALL:
         readers = [f"`{tool.name}`" for tool in TOOL_CLASSES if dataset in tool.data_sources]

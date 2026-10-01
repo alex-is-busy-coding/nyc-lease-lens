@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import UTC, datetime
 
-from nyc_lease_lens.context import request_id
+from nyc_lease_lens.observability.context import request_id
 
 # Attributes every LogRecord has; anything else came from `extra=` and is a structured field.
 _STANDARD = set(vars(logging.makeLogRecord({}))) | {"message", "asctime", "request_id", "taskName", "color_message"}

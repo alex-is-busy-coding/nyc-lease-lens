@@ -6,10 +6,10 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from nyc_lease_lens.config import OpenDataSettings
-from nyc_lease_lens.context import ContextThreadPoolExecutor
-from nyc_lease_lens.datasets import Dataset
-from nyc_lease_lens.log import ms_since
-from nyc_lease_lens.soql import in_list
+from nyc_lease_lens.data.datasets import Dataset
+from nyc_lease_lens.data.soql import in_list
+from nyc_lease_lens.observability.context import ContextThreadPoolExecutor
+from nyc_lease_lens.observability.log import ms_since
 
 logger = logging.getLogger(__name__)
 IN_CHUNK = 300  # values per `IN (...)` query, to keep request URLs short

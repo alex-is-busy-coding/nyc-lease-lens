@@ -22,7 +22,7 @@ Override any value per call, e.g. `make dev PORT=9000`.
 
 ## How it works
 
-Give the agent an address and it makes one call to `score_building_risk`. That tool identifies the building, runs every check against NYC Open Data at the same time, and passes the results to `scoring.py`, which turns them into a grade. The agent then explains the grade, and can call any check on its own for follow-up questions.
+Give the agent an address and it makes one call to `score_building_risk`. That tool identifies the building, runs every check against NYC Open Data at the same time, and passes the results to the scoring rules, which turn them into a grade. The agent then explains the grade, and can call any check on its own for follow-up questions.
 
 The diagram is generated from the code; `make docs` refreshes it.
 
@@ -39,7 +39,7 @@ flowchart TD
     parallel --> landlord["get_landlord_profile"]
     parallel --> history["get_tenant_history"]
     violations & complaints & landlord & history --> scoring
-    scoring["scoring.py<br/>points → 0-100 score → grade A-F"]
+    scoring["scoring rules<br/>points → 0-100 score → grade A-F"]
     scoring --> report["grade, score, red flags, good signs, data gaps"]
     report --> agent
     agent --> answer(["Answer: grade, then red flags by weight"])
@@ -72,7 +72,7 @@ Each red flag adds points, and the total is capped at 100:
 
 #### Weights
 
-Each red flag below adds the points shown. Where there are levels, the highest one reached counts. This table is generated from the rules in [src/nyc_lease_lens/scoring.py](src/nyc_lease_lens/scoring.py).
+Each red flag below adds the points shown. Where there are levels, the highest one reached counts. This table is generated from the rules in [src/nyc_lease_lens/scoring/red_flags.py](src/nyc_lease_lens/scoring/red_flags.py).
 
 <!-- weights:start -->
 | Red flag | Points | Source |
@@ -106,7 +106,7 @@ Each red flag below adds the points shown. Where there are levels, the highest o
 
 Every fact comes from public City of New York records, fetched live when you ask; the app stores none of it. No account or API key is needed for any of these datasets.
 
-Most of the data comes from HPD, the city's Department of Housing Preservation and Development. The table is generated from [src/nyc_lease_lens/datasets.py](src/nyc_lease_lens/datasets.py) and the datasets each tool declares; `make docs` refreshes it.
+Most of the data comes from HPD, the city's Department of Housing Preservation and Development. The table is generated from [src/nyc_lease_lens/data/datasets.py](src/nyc_lease_lens/data/datasets.py) and the datasets each tool declares; `make docs` refreshes it.
 
 <!-- data:start -->
 | Dataset | Published by | Updated | What we use it for | Read by |

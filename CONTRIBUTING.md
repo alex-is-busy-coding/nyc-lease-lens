@@ -15,7 +15,7 @@ make dev     # run the app with auto-reload at http://127.0.0.1:8000
 
 Settings live in `.env` (copied from `.env.example`, never committed) and are read by `src/nyc_lease_lens/config.py`, in groups: `settings.llm`, `settings.server`, `settings.opendata` (variables prefixed `OPENDATA_`) and `settings.logging` (prefixed `LOG_`). To add a setting, add a field to the matching group and a line to that group's section of `.env.example`.
 
-Only runtime choices belong in settings (timeouts, retries, the model, log level). Values that change what a grade means stay in code so they're reviewed and tested: look-back periods, the neighbor radius, heating seasons and sample sizes in `src/nyc_lease_lens/rules.py`, and scoring thresholds in `scoring.py`. For a tool parameter with limits, add a `Range` to `rules.py` and use its `.schema()`, `.default` and `.clamp()`, so the limits the model sees always match the ones enforced.
+Only runtime choices belong in settings (timeouts, retries, the model, log level). Values that change what a grade means stay in code so they're reviewed and tested: look-back periods, the neighbor radius, heating seasons and sample sizes in `src/nyc_lease_lens/rules.py`, and scoring thresholds in `scoring/red_flags.py`. For a tool parameter with limits, add a `Range` to `rules.py` and use its `.schema()`, `.default` and `.clamp()`, so the limits the model sees always match the ones enforced.
 
 The NYC Open Data tools need no API key, so you can work on them without Google Cloud access. Only chatting with the agent calls Vertex AI.
 
@@ -23,14 +23,18 @@ The NYC Open Data tools need no API key, so you can work on them without Google 
 
 ```
 src/nyc_lease_lens/
-  app.py          create_app(): builds the FastAPI app from settings; routes get the agent and sessions via Depends
-  agent.py        system prompt and the tool-calling loop
-  config.py       Settings (pydantic-settings)
-  opendata.py     HTTP client for NYC GeoSearch and Socrata, with retries
-  sessions.py     in-memory conversation store
-  tools/          one module per tool, registered in tools/__init__.py
-scripts/          developer scripts (README table generator)
-.github/workflows CI checks and README table updates
+  __main__.py      starts uvicorn with create_app
+  config.py        runtime settings, by group (pydantic-settings)
+  rules.py         domain rules: look-back periods, radius, heating seasons, sample sizes
+  api/             create_app() and lifespan (app.py), routes and dependencies, request-ID middleware, schemas
+  agent/           the tool-calling loop (loop.py), system prompt (prompts.py), conversation store
+  tools/           one module per tool, registered in tools/__init__.py
+  scoring/         red flags and good signs (red_flags.py), the rule types and how they're applied (engine.py)
+  data/            Open Data client, dataset registry, SoQL and parsing helpers
+  observability/   logging setup and the request-ID context
+  static/          the chat page and logo
+scripts/           developer scripts (README table generator)
+.github/workflows  CI checks and README table updates
 ```
 
 Importing a module has no side effects: nothing reads settings or builds clients until `create_app()` runs. In tests, build an app with fakes in one line and use FastAPI's `TestClient` (the `with` block runs startup and shutdown):
@@ -122,12 +126,12 @@ Tools are how the agent gets facts. Each one is a class in its own module under 
    The base class provides what every tool needs:
    - `self.query(dataset, params)` runs a SoQL query, and `self.query_in(dataset, field, values, params)` filters on a list of any length. Both turn a failed request into a `ToolError`. For the other helpers in `tools/building.py`, such as `lot_aliases`, use `self.fetch(lot_aliases, self.client, bbl)`.
    - `self.validate_bbl()` / `self.validate_bin()` check IDs before they go into a query.
-   - Build query fragments with `nyc_lease_lens.soql` (`quote`, `in_list`) and parse values with `nyc_lease_lens.parsing` (`to_int`, `to_date`) rather than by hand.
+   - Build query fragments with `nyc_lease_lens.data.soql` (`quote`, `in_list`) and parse values with `nyc_lease_lens.data.parsing` (`to_int`, `to_date`) rather than by hand.
 
    Return a plain dict; the registry turns it into JSON for the model.
 2. List the datasets it reads in `data_sources` (see [Data sources](#data-sources) below).
 3. Add the class to `TOOL_CLASSES` in `tools/__init__.py`.
-4. Update `SYSTEM_PROMPT` in `agent.py` if the agent should call it at a specific point.
+4. Update `SYSTEM_PROMPT` in `agent/prompts.py` if the agent should call it at a specific point.
 5. Run `make docs` to add it to the README tables.
 
 ### What makes a good tool
@@ -153,11 +157,11 @@ These come from problems we hit with NYC Open Data:
 
 ### Data sources
 
-Every dataset is defined once in `src/nyc_lease_lens/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
+Every dataset is defined once in `src/nyc_lease_lens/data/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
 
 ## Changing the score
 
-Every red flag is a `Rule` in `RULES` in `src/nyc_lease_lens/scoring.py`. A rule has:
+Every red flag is a `Rule` in `RULES` in `src/nyc_lease_lens/scoring/red_flags.py`; the types and the code that applies them are in `scoring/engine.py`. A rule has:
 - **what it measures**, and the source it comes from
 - **a `find` function** that reads the check results and returns `Hit`s: a value plus the text shown to the user
 - **`tiers` of `(at least, points)`**, highest first
@@ -181,7 +185,7 @@ logger.info("check finished", extra={"check": name, "duration_ms": ms_since(star
 ```
 
 - Put values in `extra=` fields rather than in the message. They show up as `key=value` with `LOG_FORMAT=text` and as JSON fields with `LOG_FORMAT=json`. Field names can't reuse `LogRecord` attributes such as `message` or `args` (ruff's `G101` catches this).
-- Every line logged during a request carries its request ID. When you run work in threads, use `ContextThreadPoolExecutor` from `nyc_lease_lens.context`, or the ID is lost.
+- Every line logged during a request carries its request ID. When you run work in threads, use `ContextThreadPoolExecutor` from `nyc_lease_lens.observability.context`, or the ID is lost.
 - Levels: `DEBUG` for detail such as chat text, tool arguments and every Open Data query; `INFO` for one line per meaningful step; `WARNING` for slow or failed requests and degraded results; `exception()` for unexpected errors.
 - Don't log chat messages or addresses above `DEBUG`.
 

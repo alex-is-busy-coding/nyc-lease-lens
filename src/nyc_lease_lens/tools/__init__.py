@@ -1,4 +1,4 @@
-from nyc_lease_lens.opendata import OpenDataClient
+from nyc_lease_lens.data.client import OpenDataClient
 from nyc_lease_lens.tools.base import Tool, ToolError, ToolRegistry
 from nyc_lease_lens.tools.building import LookupBuilding
 from nyc_lease_lens.tools.complaints import Get311Complaints

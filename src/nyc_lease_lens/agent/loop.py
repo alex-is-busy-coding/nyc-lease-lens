@@ -4,23 +4,12 @@ import time
 
 import litellm
 
-from nyc_lease_lens.log import ms_since
+from nyc_lease_lens.agent.prompts import SYSTEM_PROMPT
+from nyc_lease_lens.observability.log import ms_since
 from nyc_lease_lens.tools import ToolRegistry
 
 litellm.suppress_debug_info = True  # otherwise LiteLLM prints "Provider List" banners to stdout
 logger = logging.getLogger(__name__)
-
-SYSTEM_PROMPT = (
-    "You are NYC Lease Lens. You help New York City renters check an apartment building "
-    "for red flags before they sign a lease. When the user gives an address, call "
-    "score_building_risk: it identifies the building, runs every check and grades it. If the "
-    "address is ambiguous, ask which borough they mean. Start with the grade, then explain "
-    "the red flags in order of points, then the good signs. Mention any data gaps. Use "
-    "lookup_building, get_hpd_violations, get_311_complaints, get_landlord_profile and "
-    "get_tenant_history only when the user asks for more detail. Describe landlords by what "
-    "the public records show, not as accusations. Only state facts that come from tool "
-    "results; never guess."
-)
 
 
 class Agent:

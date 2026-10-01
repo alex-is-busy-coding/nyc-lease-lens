@@ -19,6 +19,11 @@ nyc-lease-lens = "nyc_lease_lens.__main__:main"
 requires = ["uv_build>=0.9.6,<0.10.0"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+# The build packages files on disk, not just tracked ones; keep OS clutter out.
+source-exclude = ["**/.DS_Store"]
+wheel-exclude = ["**/.DS_Store"]
+
 [dependency-groups]
 dev = [
     "mypy>=2.3.1",

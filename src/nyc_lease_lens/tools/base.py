@@ -8,9 +8,9 @@ from typing import Any, TypeVar
 
 import requests
 
-from nyc_lease_lens.datasets import Dataset
-from nyc_lease_lens.log import ms_since
-from nyc_lease_lens.opendata import OpenDataClient
+from nyc_lease_lens.data.client import OpenDataClient
+from nyc_lease_lens.data.datasets import Dataset
+from nyc_lease_lens.observability.log import ms_since
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
