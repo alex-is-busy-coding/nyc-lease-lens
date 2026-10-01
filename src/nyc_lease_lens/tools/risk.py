@@ -76,7 +76,7 @@ class ScoreBuildingRisk(Tool):
                 "notes": ["No apartments on record for this building, so there is no rental risk grade."],
             }
 
-        results: dict[str, dict[str, Any] | None] = dict.fromkeys(self.checks)
+        results: dict[str, Any] = dict.fromkeys(self.checks)  # check name -> its result, None if it failed
         gaps: list[str] = []
         with ContextThreadPoolExecutor() as pool:
             futures = {}
