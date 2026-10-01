@@ -111,13 +111,11 @@ function renderSources(sources, grade) {
     return footer;
 }
 
-// --- The raw tool calls, for developers: open the page with ?debug=1 ---
+// --- The tool calls behind the answer, collapsed ---
 
-const DEBUG = new URLSearchParams(location.search).has("debug");
-
-function renderChecks(toolCalls) {
-    const details = el("details", "checks");
-    details.append(el("summary", "", `Data checked (${toolCalls.length})`));
+function renderToolCalls(toolCalls) {
+    const details = el("details", "tool-calls");
+    details.append(el("summary", "", `Tool calls (${toolCalls.length})`));
     for (const call of toolCalls) {
         let result = call.result;
         try {
@@ -158,7 +156,7 @@ async function send() {
         if (grade) content.append(renderGradeCard(grade));
         content.append(renderMarkdown(data.response || ""));
         if (data.sources && data.sources.length) content.append(renderSources(data.sources, grade));
-        if (DEBUG && toolCalls.length) content.append(renderChecks(toolCalls));
+        if (toolCalls.length) content.append(renderToolCalls(toolCalls));
     } catch (e) {
         content.textContent = `Something went wrong: ${e.message}. Please try again.`;
     }

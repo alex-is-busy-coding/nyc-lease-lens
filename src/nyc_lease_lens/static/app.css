@@ -234,16 +234,16 @@ button:disabled {
     color: inherit;
 }
 
-/* The raw tool calls, only with ?debug=1 */
-details.checks {
+/* The tool calls behind an answer */
+details.tool-calls {
     margin-top: 0.75rem;
     font-size: 0.8rem;
     color: #555;
 }
-details.checks summary {
+details.tool-calls summary {
     cursor: pointer;
 }
-details.checks pre {
+details.tool-calls pre {
     font-family: ui-monospace, monospace;
     background: #f5f5f5;
     border-left: 3px solid #f59e0b;
