@@ -5,8 +5,11 @@
 # NYC Lease Lens
 
 [![CI](https://github.com/alex-is-busy-coding/nyc-lease-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/alex-is-busy-coding/nyc-lease-lens/actions/workflows/ci.yml)
+[![Live app](https://img.shields.io/badge/live_app-columbia.edu_only-4285F4?logo=googlecloud&logoColor=white)](https://nyc-lease-lens.cloud.run/)
 
 An AI agent that checks any NYC apartment for red flags before you sign the lease.
+
+The [live app](https://nyc-lease-lens.cloud.run/) runs on Google Cloud Run and redeploys on every push to `main`. Every question calls a paid model, so a Google sign-in limits access to Columbia accounts. Without one, you can run it yourself with the [Quickstart](#quickstart).
 
 ## Quickstart
 
