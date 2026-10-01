@@ -159,6 +159,37 @@ These come from problems we hit with NYC Open Data:
 
 Every dataset is defined once in `src/nyc_lease_lens/data/datasets.py`, and the README's Data table is generated from it. To use a new dataset, add a `Dataset` there (with its official name and publisher from the dataset's page on data.cityofnewyork.us) and to `ALL`, then query it by `datasets.YOUR_DATASET.id`.
 
+## Testing
+
+`make test` runs the suite offline in a few seconds; CI runs it on every push.
+
+| File | Covers |
+| --- | --- |
+| `test_tools_golden.py` | Every tool on edge-case buildings, against saved expected outputs |
+| `test_scoring.py` | Each red flag at its thresholds, caps, grade bands, good signs |
+| `test_tool_helpers.py` | Violation and complaint categories, citation cleanup, heating seasons, bedbug deadlines |
+| `test_agent_loop.py` | The tool-calling loop, with a fake model |
+| `test_api.py` | Routes, sessions, request IDs, error handling, through `create_app` with a fake agent |
+| `test_registry.py`, `test_config.py`, `test_rules.py`, `test_data_helpers.py` | The tool registry, settings, domain rules, SoQL and parsing helpers |
+
+**How the tool tests stay offline.** `tests/fixtures/opendata.json.gz` holds real Open Data responses, recorded once. A `ReplayClient` serves them instead of the network, and any query that wasn't recorded fails the test, so an accidental change to a query shows up immediately. Tools build their queries from today's date, so these tests freeze the clock at the recording date (`on_recording_day`).
+
+**When a tool's output changes on purpose,** regenerate the expected outputs and review the diff before committing:
+
+```bash
+UPDATE_GOLDEN=1 uv run pytest tests/test_tools_golden.py
+git diff tests/fixtures/golden_tools.json
+```
+
+**When a tool sends a new query** (or you add a golden case), the recorded responses need it too. Re-record every case from the live APIs, which takes a few minutes and saves the recording date with the responses, then update the golden outputs. Live data changes daily, so expect the golden diff to include real changes as well as yours:
+
+```bash
+uv run python scripts/record_opendata.py
+UPDATE_GOLDEN=1 uv run pytest tests/test_tools_golden.py
+```
+
+**Warnings are errors** in tests, so a new deprecation gets fixed rather than ignored.
+
 ## Changing the score
 
 Every red flag is a `Rule` in `RULES` in `src/nyc_lease_lens/scoring/red_flags.py`; the types and the code that applies them are in `scoring/engine.py`. A rule has:

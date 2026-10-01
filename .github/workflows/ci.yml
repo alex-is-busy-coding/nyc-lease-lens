@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, format and type check
+    name: Lint, type check and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +37,9 @@ jobs:
         run: uv run pre-commit run --all-files --show-diff-on-failure
         env:
           SKIP: readme-tables
+
+      - name: Run tests
+        run: uv run pytest
 
   commit-messages:
     name: Conventional commit messages

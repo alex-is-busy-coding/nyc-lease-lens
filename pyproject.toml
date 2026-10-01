@@ -26,9 +26,12 @@ wheel-exclude = ["**/.DS_Store"]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "mypy>=2.3.1",
     "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
     "ruff>=0.16.9",
+    "time-machine>=3.5.1",
     "types-requests>=2.33.0.20260906",
 ]
 
@@ -51,3 +54,12 @@ warn_redundant_casts = true
 [[tool.mypy.overrides]]
 module = ["litellm.*"]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "error",  # a new warning fails the tests, so it gets fixed rather than ignored
+    # Raised inside Starlette's TestClient itself, not our code; remove once Starlette updates.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]

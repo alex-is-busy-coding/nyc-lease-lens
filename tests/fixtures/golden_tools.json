@@ -1,0 +1,1292 @@
+{
+ "get_311_complaints {\"bbl\": \"1004117502\", \"latitude\": 40.721016, \"longitude\": -73.98813}": {
+  "bbl": "1004117502",
+  "categories": [
+   {
+    "category": "noise",
+    "complaints": 170,
+    "nearby_median_per_100_units": 50.0,
+    "per_100_units": 1700.0,
+    "percentile_vs_nearby": 99
+   }
+  ],
+  "compared_with": "117 residential buildings within 150 m that had any 311 complaints",
+  "counting_since": "2024-09-29",
+  "heat_seasons": [
+   {
+    "complaints": 0,
+    "days_with_complaints": 0,
+    "season": "2023-24"
+   },
+   {
+    "complaints": 0,
+    "days_with_complaints": 0,
+    "season": "2024-25"
+   },
+   {
+    "complaints": 0,
+    "days_with_complaints": 0,
+    "season": "2025-26"
+   }
+  ],
+  "other_complaints": 4,
+  "residential_units": 10
+ },
+ "get_311_complaints {\"bbl\": \"3042710001\", \"categories\": [\"heat_hot_water\", \"pests\"]}": {
+  "bbl": "3042710001",
+  "categories": [
+   {
+    "category": "heat_hot_water",
+    "complaints": 1203
+   },
+   {
+    "category": "pests",
+    "complaints": 153
+   }
+  ],
+  "counting_since": "2024-09-29",
+  "heat_seasons": [
+   {
+    "complaints": 424,
+    "days_with_complaints": 143,
+    "season": "2023-24"
+   },
+   {
+    "complaints": 490,
+    "days_with_complaints": 133,
+    "season": "2024-25"
+   },
+   {
+    "complaints": 639,
+    "days_with_complaints": 139,
+    "season": "2025-26"
+   }
+  ],
+  "notes": [
+   "This lot was renumbered; complaints filed under 3042719001 are included.",
+   "Pass latitude and longitude to compare with nearby buildings."
+  ],
+  "other_complaints": 118
+ },
+ "get_311_complaints {\"bbl\": \"3042710001\", \"latitude\": 40.671582, \"longitude\": -73.863669, \"months\": 6, \"radius_m\": 999}": {
+  "bbl": "3042710001",
+  "categories": [
+   {
+    "category": "mold",
+    "complaints": 25,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 2.1,
+    "percentile_vs_nearby": 98
+   },
+   {
+    "category": "heat_hot_water",
+    "complaints": 56,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 4.6,
+    "percentile_vs_nearby": 97
+   },
+   {
+    "category": "leaks_plumbing",
+    "complaints": 82,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 6.8,
+    "percentile_vs_nearby": 95
+   },
+   {
+    "category": "sanitation",
+    "complaints": 1,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 0.1,
+    "percentile_vs_nearby": 93
+   },
+   {
+    "category": "pests",
+    "complaints": 25,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 2.1,
+    "percentile_vs_nearby": 92
+   },
+   {
+    "category": "repairs",
+    "complaints": 75,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 6.2,
+    "percentile_vs_nearby": 90
+   },
+   {
+    "category": "noise",
+    "complaints": 102,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 8.4,
+    "percentile_vs_nearby": 82
+   }
+  ],
+  "compared_with": "282 residential buildings within 500 m that had any 311 complaints",
+  "counting_since": "2026-03-31",
+  "heat_seasons": [
+   {
+    "complaints": 424,
+    "days_with_complaints": 143,
+    "season": "2023-24"
+   },
+   {
+    "complaints": 490,
+    "days_with_complaints": 133,
+    "season": "2024-25"
+   },
+   {
+    "complaints": 639,
+    "days_with_complaints": 139,
+    "season": "2025-26"
+   }
+  ],
+  "notes": [
+   "This lot was renumbered; complaints filed under 3042719001 are included."
+  ],
+  "other_complaints": 25,
+  "residential_units": 1208
+ },
+ "get_311_complaints {\"bbl\": \"3042710001\", \"latitude\": 40.671582, \"longitude\": -73.863669}": {
+  "bbl": "3042710001",
+  "categories": [
+   {
+    "category": "leaks_plumbing",
+    "complaints": 668,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 55.3,
+    "percentile_vs_nearby": 100
+   },
+   {
+    "category": "mold",
+    "complaints": 248,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 20.5,
+    "percentile_vs_nearby": 100
+   },
+   {
+    "category": "pests",
+    "complaints": 153,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 12.7,
+    "percentile_vs_nearby": 100
+   },
+   {
+    "category": "heat_hot_water",
+    "complaints": 1203,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 99.6,
+    "percentile_vs_nearby": 94
+   },
+   {
+    "category": "repairs",
+    "complaints": 625,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 51.7,
+    "percentile_vs_nearby": 94
+   },
+   {
+    "category": "noise",
+    "complaints": 273,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 22.6,
+    "percentile_vs_nearby": 89
+   },
+   {
+    "category": "sanitation",
+    "complaints": 20,
+    "nearby_median_per_100_units": 0.0,
+    "per_100_units": 1.7,
+    "percentile_vs_nearby": 78
+   }
+  ],
+  "compared_with": "18 residential buildings within 150 m that had any 311 complaints",
+  "counting_since": "2024-09-29",
+  "heat_seasons": [
+   {
+    "complaints": 424,
+    "days_with_complaints": 143,
+    "season": "2023-24"
+   },
+   {
+    "complaints": 490,
+    "days_with_complaints": 133,
+    "season": "2024-25"
+   },
+   {
+    "complaints": 639,
+    "days_with_complaints": 139,
+    "season": "2025-26"
+   }
+  ],
+  "notes": [
+   "This lot was renumbered; complaints filed under 3042719001 are included."
+  ],
+  "other_complaints": 118,
+  "residential_units": 1208
+ },
+ "get_hpd_violations {\"bbl\": \"1004117502\"}": {
+  "bbl": "1004117502",
+  "categories": [
+   {
+    "category": "fire_safety",
+    "open": 3,
+    "open_class_c": 1,
+    "recent": 0
+   },
+   {
+    "category": "other_repairs",
+    "open": 4,
+    "open_class_c": 0,
+    "recent": 0
+   },
+   {
+    "category": "gas_electric",
+    "open": 1,
+    "open_class_c": 0,
+    "recent": 0
+   }
+  ],
+  "counting_since": "2023-09-30",
+  "issued_last_36_months": {
+   "total": 0
+  },
+  "latest_open_class_c": [
+   {
+    "apartment": "2F",
+    "category": "fire_safety",
+    "description": "Install the missing or repair/replace the defective window guard(s) in accordance with the specifications of the new york city health code section 24 rcny chapter 12. wg to...",
+    "inspected": "2017-10-17"
+   }
+  ],
+  "oldest_open_hazardous": {
+   "category": "other_repairs",
+   "class": "B",
+   "days_open": 5981,
+   "description": "Provide adequate lighting at or near the outside of the front entranceway of the building and keep same burning from sunset every day to sunrise on the day following a minimum of...",
+   "inspected": "2010-05-16"
+  },
+  "open_now": {
+   "A": 5,
+   "B": 2,
+   "C": 1,
+   "total": 8
+  },
+  "rent_impairing_open": 0
+ },
+ "get_hpd_violations {\"bbl\": \"1008350041\"}": {
+  "bbl": "1008350041",
+  "counting_since": "2023-09-30",
+  "notes": [
+   "No open HPD violations, and none issued in this period."
+  ]
+ },
+ "get_hpd_violations {\"bbl\": \"3042710001\", \"months\": 12}": {
+  "addresses_on_lot": [
+   "725 LINCOLN AVENUE",
+   "735 LINCOLN AVENUE",
+   "745 LINCOLN AVENUE",
+   "750 ELDERT LANE",
+   "755 LINCOLN AVENUE",
+   "760 ELDERT LANE",
+   "765 LINCOLN AVENUE",
+   "770 ELDERT LANE",
+   "780 ELDERT LANE",
+   "790 ELDERT LANE"
+  ],
+  "bbl": "3042710001",
+  "categories": [
+   {
+    "category": "pests",
+    "open": 560,
+    "open_class_c": 538,
+    "recent": 58
+   },
+   {
+    "category": "mold",
+    "open": 821,
+    "open_class_c": 155,
+    "recent": 82
+   },
+   {
+    "category": "other_repairs",
+    "open": 2172,
+    "open_class_c": 148,
+    "recent": 301
+   },
+   {
+    "category": "leaks_plumbing",
+    "open": 647,
+    "open_class_c": 94,
+    "recent": 97
+   },
+   {
+    "category": "fire_safety",
+    "open": 142,
+    "open_class_c": 44,
+    "recent": 77
+   },
+   {
+    "category": "heat_hot_water",
+    "open": 60,
+    "open_class_c": 44,
+    "recent": 44
+   },
+   {
+    "category": "illegal_occupancy",
+    "open": 9,
+    "open_class_c": 9,
+    "recent": 1
+   },
+   {
+    "category": "gas_electric",
+    "open": 73,
+    "open_class_c": 8,
+    "recent": 20
+   },
+   {
+    "category": "lead_paint",
+    "open": 4,
+    "open_class_c": 4,
+    "recent": 2
+   },
+   {
+    "category": "garbage",
+    "open": 2,
+    "open_class_c": 1,
+    "recent": 2
+   },
+   {
+    "category": "smoke_co_detectors",
+    "open": 238,
+    "open_class_c": 0,
+    "recent": 25
+   }
+  ],
+  "counting_since": "2025-09-30",
+  "issued_last_12_months": {
+   "A": 124,
+   "B": 324,
+   "C": 260,
+   "I": 1,
+   "total": 709
+  },
+  "latest_open_class_c": [
+   {
+    "apartment": "10N",
+    "category": "pests",
+    "description": "Abate the infestation consisting of roaches in the entire apartment located at apt 10n, 10th story, 3rd apartment from north at east , section ''south''",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "10N",
+    "category": "fire_safety",
+    "description": "Install the missing or repair/replace the defective window guard(s) in accordance with the specifications of the new york city health code section 24 rcny chapter 12. wg to...",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "10N",
+    "category": "pests",
+    "description": "Abate the infestation consisting of mice in the entire apartment located at apt 10n, 10th story, 3rd apartment from north at east , section ''south''",
+    "inspected": "2026-09-26"
+   },
+   {
+    "category": "garbage",
+    "description": "Remove the accumulation of refuse and/or rubbish and maintain in a clean condition the household items and discarded furniture at approx. 15 cubic yards at building 's west yard",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "6M",
+    "category": "pests",
+    "description": "Abate the infestation consisting of roaches in the entire apartment located at apt 6m, 6th story, 6th apartment from north at east",
+    "inspected": "2026-09-16"
+   }
+  ],
+  "notes": [
+   "This tax lot has 10 addresses; counts cover all of them.",
+   "Class counts are exact; categories are based on the 5000 most recent violations only."
+  ],
+  "oldest_open_hazardous": {
+   "apartment": "13A",
+   "category": "leaks_plumbing",
+   "class": "B",
+   "days_open": 6760,
+   "description": "Abate the nuisance consisting of concealed water leak at ceiling in the bathroom located at apt 13a, 13th story, 2nd apartment from west at north",
+   "inspected": "2008-03-28"
+  },
+  "open_now": {
+   "A": 784,
+   "B": 3583,
+   "C": 1234,
+   "I": 2,
+   "total": 5603
+  },
+  "rent_impairing_open": 220
+ },
+ "get_hpd_violations {\"bbl\": \"3042710001\"}": {
+  "addresses_on_lot": [
+   "725 LINCOLN AVENUE",
+   "735 LINCOLN AVENUE",
+   "745 LINCOLN AVENUE",
+   "750 ELDERT LANE",
+   "755 LINCOLN AVENUE",
+   "760 ELDERT LANE",
+   "765 LINCOLN AVENUE",
+   "770 ELDERT LANE",
+   "780 ELDERT LANE",
+   "790 ELDERT LANE"
+  ],
+  "bbl": "3042710001",
+  "categories": [
+   {
+    "category": "pests",
+    "open": 333,
+    "open_class_c": 318,
+    "recent": 553
+   },
+   {
+    "category": "other_repairs",
+    "open": 1292,
+    "open_class_c": 129,
+    "recent": 2093
+   },
+   {
+    "category": "mold",
+    "open": 425,
+    "open_class_c": 99,
+    "recent": 741
+   },
+   {
+    "category": "leaks_plumbing",
+    "open": 348,
+    "open_class_c": 85,
+    "recent": 761
+   },
+   {
+    "category": "heat_hot_water",
+    "open": 53,
+    "open_class_c": 41,
+    "recent": 170
+   },
+   {
+    "category": "fire_safety",
+    "open": 86,
+    "open_class_c": 36,
+    "recent": 368
+   },
+   {
+    "category": "gas_electric",
+    "open": 50,
+    "open_class_c": 8,
+    "recent": 105
+   },
+   {
+    "category": "illegal_occupancy",
+    "open": 4,
+    "open_class_c": 4,
+    "recent": 4
+   },
+   {
+    "category": "lead_paint",
+    "open": 2,
+    "open_class_c": 2,
+    "recent": 3
+   },
+   {
+    "category": "garbage",
+    "open": 2,
+    "open_class_c": 1,
+    "recent": 11
+   },
+   {
+    "category": "smoke_co_detectors",
+    "open": 121,
+    "open_class_c": 0,
+    "recent": 191
+   }
+  ],
+  "counting_since": "2023-09-30",
+  "issued_last_36_months": {
+   "A": 1126,
+   "B": 3684,
+   "C": 2446,
+   "I": 4,
+   "total": 7260
+  },
+  "latest_open_class_c": [
+   {
+    "apartment": "10N",
+    "category": "fire_safety",
+    "description": "Install the missing or repair/replace the defective window guard(s) in accordance with the specifications of the new york city health code section 24 rcny chapter 12. wg to...",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "10N",
+    "category": "pests",
+    "description": "Abate the infestation consisting of roaches in the entire apartment located at apt 10n, 10th story, 3rd apartment from north at east , section ''south''",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "10N",
+    "category": "pests",
+    "description": "Abate the infestation consisting of mice in the entire apartment located at apt 10n, 10th story, 3rd apartment from north at east , section ''south''",
+    "inspected": "2026-09-26"
+   },
+   {
+    "category": "garbage",
+    "description": "Remove the accumulation of refuse and/or rubbish and maintain in a clean condition the household items and discarded furniture at approx. 15 cubic yards at building 's west yard",
+    "inspected": "2026-09-26"
+   },
+   {
+    "apartment": "6M",
+    "category": "pests",
+    "description": "Abate the infestation consisting of roaches in the entire apartment located at apt 6m, 6th story, 6th apartment from north at east",
+    "inspected": "2026-09-16"
+   }
+  ],
+  "notes": [
+   "This tax lot has 10 addresses; counts cover all of them.",
+   "Class counts are exact; categories are based on the 5000 most recent violations only."
+  ],
+  "oldest_open_hazardous": {
+   "apartment": "13A",
+   "category": "leaks_plumbing",
+   "class": "B",
+   "days_open": 6760,
+   "description": "Abate the nuisance consisting of concealed water leak at ceiling in the bathroom located at apt 13a, 13th story, 2nd apartment from west at north",
+   "inspected": "2008-03-28"
+  },
+  "open_now": {
+   "A": 784,
+   "B": 3583,
+   "C": 1234,
+   "I": 2,
+   "total": 5603
+  },
+  "rent_impairing_open": 220
+ },
+ "get_hpd_violations {\"bbl\": \"nope\"}": {
+  "error": "'nope' is not a 10-digit BBL. Call lookup_building first."
+ },
+ "get_landlord_profile {\"bin\": \"1005353\"}": {
+  "bin": "1005353",
+  "head_officer": "DIVYA RASHAD",
+  "management_portfolio": {
+   "apartments": 3635,
+   "buildings": 250,
+   "buildings_in_enforcement_program": 0,
+   "citywide_per_100_apartments": 19.3,
+   "linked_by": "same managing agent company",
+   "open_class_c": 221,
+   "open_class_c_per_100_apartments": 6.1,
+   "times_citywide_rate": 0.3,
+   "worst_buildings": [
+    {
+     "address": "320 West 96 Street Manhattan",
+     "apartments": 31,
+     "open_class_c": 58
+    },
+    {
+     "address": "221 East 18 Street Brooklyn",
+     "apartments": 60,
+     "open_class_c": 26
+    },
+    {
+     "address": "807 Riverside Drive Manhattan",
+     "apartments": 54,
+     "open_class_c": 21
+    }
+   ]
+  },
+  "managing_agent": "THE ANDREWS ORGANIZATION",
+  "owner": "157 LUDLOW STREET CONDOMINIUM",
+  "owner_portfolio": {
+   "apartments": 3297,
+   "buildings": 226,
+   "buildings_in_enforcement_program": 0,
+   "citywide_per_100_apartments": 19.3,
+   "linked_by": "same head officer and office ZIP",
+   "open_class_c": 155,
+   "open_class_c_per_100_apartments": 4.7,
+   "times_citywide_rate": 0.2,
+   "worst_buildings": [
+    {
+     "address": "221 East 18 Street Brooklyn",
+     "apartments": 60,
+     "open_class_c": 26
+    },
+    {
+     "address": "807 Riverside Drive Manhattan",
+     "apartments": 54,
+     "open_class_c": 21
+    },
+    {
+     "address": "250 Manhattan Avenue Manhattan",
+     "apartments": 20,
+     "open_class_c": 12
+    }
+   ]
+  },
+  "registration": {
+   "data_as_of": "2026-07-31",
+   "last_registered": "2025-09-12",
+   "registered_until": "2026-09-01",
+   "status": "renewal_not_yet_in_data"
+  }
+ },
+ "get_landlord_profile {\"bin\": \"1015862\"}": {
+  "bin": "1015862",
+  "notes": [
+   "No HPD registration for this building. Buildings with 3 or more apartments must register every year; 1-2 family homes usually don't have to."
+  ],
+  "registered": false
+ },
+ "get_landlord_profile {\"bin\": \"12\"}": {
+  "error": "'12' is not a 7-digit BIN. Call lookup_building first."
+ },
+ "get_landlord_profile {\"bin\": \"3343250\"}": {
+  "bin": "3343250",
+  "head_officer": "RICK GROPPER",
+  "management_portfolio": {
+   "apartments": 7768,
+   "buildings": 159,
+   "buildings_in_enforcement_program": 3,
+   "citywide_per_100_apartments": 19.3,
+   "linked_by": "same managing agent company",
+   "open_class_c": 2405,
+   "open_class_c_per_100_apartments": 31.0,
+   "times_citywide_rate": 1.6,
+   "worst_buildings": [
+    {
+     "address": "765 Lincoln Avenue Brooklyn",
+     "apartments": 294,
+     "open_class_c": 448
+    },
+    {
+     "address": "760 Eldert Lane Brooklyn",
+     "apartments": 294,
+     "open_class_c": 423
+    },
+    {
+     "address": "675 Lincoln Avenue Brooklyn",
+     "apartments": 319,
+     "open_class_c": 271
+    }
+   ]
+  },
+  "managing_agent": "GRENADIER REALTY MANAGEMENT",
+  "owner": "LP PRESERVATION HTC LLC",
+  "owner_portfolio": {
+   "apartments": 8143,
+   "buildings": 114,
+   "buildings_in_enforcement_program": 4,
+   "citywide_per_100_apartments": 19.3,
+   "linked_by": "same head officer and office ZIP",
+   "open_class_c": 2465,
+   "open_class_c_per_100_apartments": 30.3,
+   "times_citywide_rate": 1.6,
+   "worst_buildings": [
+    {
+     "address": "765 Lincoln Avenue Brooklyn",
+     "apartments": 294,
+     "open_class_c": 448
+    },
+    {
+     "address": "760 Eldert Lane Brooklyn",
+     "apartments": 294,
+     "open_class_c": 423
+    },
+    {
+     "address": "675 Lincoln Avenue Brooklyn",
+     "apartments": 319,
+     "open_class_c": 271
+    }
+   ]
+  },
+  "registration": {
+   "data_as_of": "2026-07-31",
+   "last_registered": "2025-09-29",
+   "registered_until": "2026-09-01",
+   "status": "renewal_not_yet_in_data"
+  }
+ },
+ "get_tenant_history {\"bbl\": \"1004117502\"}": {
+  "bbl": "1004117502",
+  "bedbug_reports": [
+   {
+    "apartments": 10,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2024-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 10,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2023-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 10,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2022-11-01",
+    "reinfested": 0
+   }
+  ],
+  "counting_since": "2021-09-28",
+  "evictions": {
+   "by_year": {},
+   "total": 0
+  },
+  "housing_court": {
+   "cases": {},
+   "harassment_findings": [],
+   "open_cases": 0
+  },
+  "vacate_orders": {
+   "in_effect": [],
+   "rescinded_since": 0
+  }
+ },
+ "get_tenant_history {\"bbl\": \"1008350041\"}": {
+  "bbl": "1008350041",
+  "bedbug_reports": [],
+  "counting_since": "2021-09-28",
+  "evictions": {
+   "by_year": {},
+   "total": 0
+  },
+  "housing_court": {
+   "cases": {},
+   "harassment_findings": [],
+   "open_cases": 0
+  },
+  "notes": [
+   "No bedbug reports on file for this lot. Buildings with 3 or more apartments must file one every year."
+  ],
+  "vacate_orders": {
+   "in_effect": [],
+   "rescinded_since": 0
+  }
+ },
+ "get_tenant_history {\"bbl\": \"3017920020\"}": {
+  "bbl": "3017920020",
+  "bedbug_reports": [
+   {
+    "apartments": 23,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2024-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 23,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2023-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 23,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2022-11-01",
+    "reinfested": 0
+   }
+  ],
+  "counting_since": "2021-09-28",
+  "evictions": {
+   "by_year": {
+    "2026": 2
+   },
+   "total": 2
+  },
+  "housing_court": {
+   "cases": {
+    "harassment_cases": 1,
+    "heat_hot_water_cases": 2,
+    "tenant_repair_cases": 6
+   },
+   "harassment_findings": [
+    {
+     "decided": "2026-06-22",
+     "how": "after inquest",
+     "penalty": 5000
+    }
+   ],
+   "open_cases": 2
+  },
+  "vacate_orders": {
+   "in_effect": [],
+   "rescinded_since": 0
+  }
+ },
+ "get_tenant_history {\"bbl\": \"3023280003\", \"years\": 10}": {
+  "bbl": "3023280003",
+  "bedbug_reports": [
+   {
+    "apartments": 18,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2024-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 16,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2023-11-01",
+    "reinfested": 0
+   },
+   {
+    "apartments": 16,
+    "buildings_on_lot": 1,
+    "buildings_reporting": 1,
+    "eradicated": 0,
+    "filed": true,
+    "infested": 0,
+    "period_start": "2022-11-01",
+    "reinfested": 0
+   }
+  ],
+  "counting_since": "2016-09-28",
+  "evictions": {
+   "by_year": {},
+   "total": 0
+  },
+  "housing_court": {
+   "cases": {
+    "tenant_repair_cases": 1
+   },
+   "court_appointed_administrator": {
+    "cases": 2,
+    "opened": [
+     "2012-01-09"
+    ]
+   },
+   "harassment_findings": [],
+   "open_cases": 0
+  },
+  "vacate_orders": {
+   "in_effect": [],
+   "rescinded_since": 0
+  }
+ },
+ "get_tenant_history {\"bbl\": \"3042710001\"}": {
+  "bbl": "3042710001",
+  "bedbug_reports": [
+   {
+    "apartments": 1202,
+    "buildings_on_lot": 10,
+    "buildings_reporting": 9,
+    "eradicated": 6,
+    "filed": true,
+    "infested": 6,
+    "period_start": "2024-11-01",
+    "reinfested": 0
+   },
+   {
+    "filed": false,
+    "period_start": "2023-11-01"
+   },
+   {
+    "apartments": 1178,
+    "buildings_on_lot": 10,
+    "buildings_reporting": 6,
+    "eradicated": 2,
+    "filed": true,
+    "infested": 2,
+    "period_start": "2022-11-01",
+    "reinfested": 0
+   }
+  ],
+  "counting_since": "2021-09-28",
+  "evictions": {
+   "by_year": {
+    "2022": 8,
+    "2023": 5,
+    "2024": 10,
+    "2025": 1,
+    "2026": 7
+   },
+   "total": 31
+  },
+  "housing_court": {
+   "cases": {
+    "access_warrants": 18,
+    "city_comprehensive_cases": 1,
+    "harassment_cases": 3,
+    "heat_hot_water_cases": 24,
+    "tenant_repair_cases": 68
+   },
+   "harassment_findings": [],
+   "open_cases": 10
+  },
+  "notes": [
+   "This lot was renumbered; records under 3042719001 are included.",
+   "No bedbug report filed for the period(s) starting 2023-11-01. Owners of buildings with 3 or more apartments must file one every year."
+  ],
+  "vacate_orders": {
+   "in_effect": [
+    {
+     "address": "760 Eldert Lane",
+     "reason": "Fire Damage",
+     "scope": "Partial",
+     "since": "2025-04-18",
+     "units": 1
+    }
+   ],
+   "rescinded_since": 2
+  }
+ },
+ "lookup_building {\"address\": \"157 Ludlow St\", \"borough\": \"Manhattan\"}": {
+  "address": "157 LUDLOW STREET, New York, NY",
+  "bbl": "1004117502",
+  "bin": "1005353",
+  "borough": "Manhattan",
+  "building": {
+   "apartments_in_building": 10,
+   "building_class": "RM",
+   "floors": 7,
+   "owner_of_record": "157 LUDLOW CONDOMINIUM",
+   "residential_units_on_lot": 10,
+   "total_units_on_lot": 11,
+   "year_built": 1900
+  },
+  "latitude": 40.721016,
+  "longitude": -73.98813,
+  "zip": "10002"
+ },
+ "lookup_building {\"address\": \"350 5th Ave\", \"borough\": \"Manhattan\"}": {
+  "address": "350 5 AVENUE, New York, NY",
+  "bbl": "1008350041",
+  "bin": "1015862",
+  "borough": "Manhattan",
+  "building": {
+   "building_class": "O4",
+   "floors": 102,
+   "owner_of_record": "ESRT EMPIRE STATE BUILDING, L.L.C.",
+   "residential_units_on_lot": 0,
+   "total_units_on_lot": 513,
+   "year_built": 1931
+  },
+  "latitude": 40.748441,
+  "longitude": -73.985656,
+  "notes": [
+   "No residential units on record: this may not be an apartment building."
+  ],
+  "zip": "10118"
+ },
+ "lookup_building {\"address\": \"350 5th Ave\"}": {
+  "ambiguous": true,
+  "candidates": [
+   {
+    "address": "350 5 AVENUE, New York, NY",
+    "borough": "Manhattan",
+    "zip": "10118"
+   },
+   {
+    "address": "350 5 AVENUE, Brooklyn, NY",
+    "borough": "Brooklyn",
+    "zip": "11215"
+   }
+  ],
+  "message": "This address exists in more than one borough. Ask the user which one they mean."
+ },
+ "lookup_building {\"address\": \"760 Eldert Lane\", \"borough\": \"Brooklyn\"}": {
+  "address": "760 ELDERT LANE, Brooklyn, NY",
+  "bbl": "3042710001",
+  "bin": "3343250",
+  "borough": "Brooklyn",
+  "building": {
+   "apartments_in_building": 294,
+   "building_class": "U7",
+   "floors": null,
+   "owner_of_record": "LINDEN PLAZA HOUSING CO., INC.",
+   "residential_units_on_lot": 0,
+   "total_units_on_lot": 0,
+   "year_built": null
+  },
+  "latitude": 40.671582,
+  "longitude": -73.863669,
+  "notes": [
+   "PLUTO's record for this lot looks outdated (it may have been renumbered)."
+  ],
+  "zip": "11208"
+ },
+ "lookup_building {\"address\": \"asdkjh nowhere\"}": {
+  "error": "No NYC building found for 'asdkjh nowhere'. Check the house number and street."
+ },
+ "score_building_risk {\"address\": \"157 Ludlow St\", \"borough\": \"Manhattan\"}": {
+  "address": "157 LUDLOW STREET, New York, NY",
+  "apartments_used_for_rates": 10,
+  "bbl": "1004117502",
+  "bin": "1005353",
+  "good_signs": [
+   "No heat/hot water complaints in the last 3 winters.",
+   "Landlord's buildings average 0.3x the citywide rate of hazardous violations.",
+   "No vacate orders in effect, harassment findings or court-appointed administrators.",
+   "No bedbugs reported in recent bedbug reports."
+  ],
+  "grade": "B",
+  "red_flags": [
+   {
+    "finding": "Oldest open hazardous violation has been open 16 years (Provide adequate lighting at or near the outside of the front entranceway of the)",
+    "points": 8,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "1 open class C (immediately hazardous) violations (10 per 100 apartments)",
+    "points": 5,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "More noise complaints per apartment than 99% of nearby buildings",
+    "points": 3,
+    "source": "311 complaints"
+   }
+  ],
+  "scale": "0 (no red flags) to 100. A: 0-9, B: 10-24, C: 25-44, D: 45-69, F: 70-100",
+  "score": 16
+ },
+ "score_building_risk {\"address\": \"193 Bedford Avenue\", \"borough\": \"Brooklyn\"}": {
+  "address": "193 BEDFORD AVENUE, Brooklyn, NY",
+  "apartments_used_for_rates": 16,
+  "bbl": "3023280003",
+  "bin": "3062090",
+  "good_signs": [
+   "No open HPD violations.",
+   "No heat/hot water complaints in the last 3 winters.",
+   "Landlord's buildings average 0.1x the citywide rate of hazardous violations.",
+   "No bedbugs reported in recent bedbug reports."
+  ],
+  "grade": "A",
+  "red_flags": [
+   {
+    "finding": "A court appointed an administrator to run the building (2 case(s), latest 2012-01-09)",
+    "points": 5,
+    "source": "HPD litigation"
+   },
+   {
+    "finding": "More pest complaints per apartment than 92% of nearby buildings",
+    "points": 3,
+    "source": "311 complaints"
+   }
+  ],
+  "scale": "0 (no red flags) to 100. A: 0-9, B: 10-24, C: 25-44, D: 45-69, F: 70-100",
+  "score": 8
+ },
+ "score_building_risk {\"address\": \"350 5th Ave\", \"borough\": \"Manhattan\"}": {
+  "address": "350 5 AVENUE, New York, NY",
+  "bbl": "1008350041",
+  "grade": null,
+  "notes": [
+   "No apartments on record for this building, so there is no rental risk grade."
+  ]
+ },
+ "score_building_risk {\"address\": \"350 5th Ave\"}": {
+  "ambiguous": true,
+  "candidates": [
+   {
+    "address": "350 5 AVENUE, New York, NY",
+    "borough": "Manhattan",
+    "zip": "10118"
+   },
+   {
+    "address": "350 5 AVENUE, Brooklyn, NY",
+    "borough": "Brooklyn",
+    "zip": "11215"
+   }
+  ],
+  "message": "This address exists in more than one borough. Ask the user which one they mean."
+ },
+ "score_building_risk {\"address\": \"760 Eldert Lane\", \"borough\": \"Brooklyn\"}": {
+  "address": "760 ELDERT LANE, Brooklyn, NY",
+  "apartments_used_for_rates": 1208,
+  "bbl": "3042710001",
+  "bin": "3343250",
+  "good_signs": [],
+  "grade": "F",
+  "notes": [
+   "PLUTO's record for this lot looks outdated (it may have been renumbered)."
+  ],
+  "red_flags": [
+   {
+    "finding": "1234 open class C (immediately hazardous) violations (102 per 100 apartments)",
+    "points": 30,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "Partial vacate order in effect since 2025-04-18 (Fire Damage, 760 Eldert Lane)",
+    "points": 20,
+    "source": "HPD vacate orders"
+   },
+   {
+    "finding": "Heat/hot water complaints on 139 days in a recent winter",
+    "points": 12,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "220 open rent-impairing violations",
+    "points": 10,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "4 open illegal-occupancy violations: apartments may not be legal",
+    "points": 10,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "Oldest open hazardous violation has been open 19 years (Abate the nuisance consisting of concealed water leak at ceiling in the bathroom)",
+    "points": 8,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "More leak/plumbing complaints per apartment than any nearby building",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "More mold complaints per apartment than any nearby building",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "More pest complaints per apartment than any nearby building",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "2 open class C lead paint violations",
+    "points": 5,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "Landlord's buildings average 1.6x the citywide rate of hazardous violations",
+    "points": 5,
+    "source": "HPD registrations"
+   },
+   {
+    "finding": "4 of the landlord's buildings are in the city's program for the worst-maintained buildings",
+    "points": 5,
+    "source": "HPD registrations"
+   },
+   {
+    "finding": "Heat problems in 3 of the last 3 winters",
+    "points": 4,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "Missing required bedbug report(s) for 2023-11-01",
+    "points": 4,
+    "source": "HPD bedbug reports"
+   }
+  ],
+  "scale": "0 (no red flags) to 100. A: 0-9, B: 10-24, C: 25-44, D: 45-69, F: 70-100",
+  "score": 100
+ },
+ "score_building_risk {\"address\": \"790 Lafayette Avenue\", \"borough\": \"Brooklyn\"}": {
+  "address": "790 LAFAYETTE AVENUE, Brooklyn, NY",
+  "apartments_used_for_rates": 23,
+  "bbl": "3017920020",
+  "bin": "3050036",
+  "good_signs": [
+   "No bedbugs reported in recent bedbug reports."
+  ],
+  "grade": "F",
+  "red_flags": [
+   {
+    "finding": "93 open class C (immediately hazardous) violations (404 per 100 apartments)",
+    "points": 30,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "Housing court found tenant harassment (2026-06-22)",
+    "points": 25,
+    "source": "HPD litigation"
+   },
+   {
+    "finding": "77 open rent-impairing violations",
+    "points": 10,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "1 open illegal-occupancy violations: apartments may not be legal",
+    "points": 10,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "Landlord's buildings average 6.7x the citywide rate of hazardous violations",
+    "points": 10,
+    "source": "HPD registrations"
+   },
+   {
+    "finding": "Oldest open hazardous violation has been open 6 years (Repair the broken or defective plastered surfaces and paint in a uniform color c)",
+    "points": 8,
+    "source": "HPD violations"
+   },
+   {
+    "finding": "More heat/hot water complaints per apartment than any nearby building",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "More mold complaints per apartment than any nearby building",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "More leak/plumbing complaints per apartment than 99% of nearby buildings",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "Heat/hot water complaints on 52 days in a recent winter",
+    "points": 6,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "10 of the landlord's buildings are in the city's program for the worst-maintained buildings",
+    "points": 5,
+    "source": "HPD registrations"
+   },
+   {
+    "finding": "Heat problems in 2 of the last 3 winters",
+    "points": 4,
+    "source": "311 complaints"
+   },
+   {
+    "finding": "2 evictions in 5 years (1.7 per 100 apartments a year)",
+    "points": 4,
+    "source": "Marshal evictions"
+   }
+  ],
+  "scale": "0 (no red flags) to 100. A: 0-9, B: 10-24, C: 25-44, D: 45-69, F: 70-100",
+  "score": 100
+ }
+}

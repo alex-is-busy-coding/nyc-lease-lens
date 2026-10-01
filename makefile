@@ -6,7 +6,7 @@ endif
 UV_RUN := uv run
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install login gcp-setup auth-check run dev lint format typecheck check docs clean require-gcloud
+.PHONY: help setup env install login gcp-setup auth-check run dev lint format typecheck test check docs clean require-gcloud
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -53,6 +53,9 @@ format: ## Auto-format and fix lint issues with ruff
 
 typecheck: ## Type-check with mypy
 	$(UV_RUN) mypy
+
+test: ## Run the test suite (offline, a few seconds)
+	$(UV_RUN) pytest
 
 check: ## Run every pre-commit hook on all files
 	$(UV_RUN) pre-commit run --all-files
