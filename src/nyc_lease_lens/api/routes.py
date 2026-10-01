@@ -48,8 +48,7 @@ def chat(body: ChatRequest, agent: AgentDep, sessions: SessionsDep) -> ChatRespo
     try:
         response, tool_calls = agent.run(messages)
     except Exception:
-        messages.pop()  # the agent added nothing, so this leaves the session as it was; a retry starts clean
-        # The details go to the logs only; error text can include internals such as project IDs.
+        messages.pop()  # a retry shouldn't send the message twice
         logger.exception("agent failed", extra={"session_id": session_id})
         response = f"Sorry, something went wrong on our side. Please try again. (Reference: {request_id.get()})"
         tool_calls = []

@@ -72,7 +72,6 @@ def test_runs_the_requested_tool_then_answers(model):
         "tool_call_id": "call_1",
         "content": calls[0]["result"],
     }
-    # The conversation keeps every step.
     assert [m["role"] for m in messages] == ["system", "user", "assistant", "tool", "assistant"]
 
 
@@ -90,7 +89,6 @@ def test_stops_after_the_round_limit(model):
     answer, calls = make_agent(max_tool_rounds=3).run(messages)
     assert answer == "Sorry, I hit my tool-call limit before finishing."
     assert len(calls) == 3 and len(model.requests) == 3
-    # Every tool call keeps its result, and the history ends on an answer the next turn can follow.
     assert messages[-2]["role"] == "tool" and messages[-1] == {"role": "assistant", "content": answer}
 
 
@@ -102,7 +100,6 @@ def test_a_failure_mid_turn_leaves_the_history_unchanged(model):
     messages = [{"role": "system", "content": "prompt"}, {"role": "user", "content": "Check 157 Ludlow St"}]
     with pytest.raises(TimeoutError):
         make_agent().run(messages)
-    # No dangling tool call: the caller can retry or carry on.
     assert messages == [{"role": "system", "content": "prompt"}, {"role": "user", "content": "Check 157 Ludlow St"}]
 
 

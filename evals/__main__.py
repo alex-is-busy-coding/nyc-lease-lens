@@ -45,7 +45,6 @@ def run_case(case: Case, agent: Agent) -> Transcript:
         transcript.turns.append(turn)
         messages.append({"role": "user", "content": text})
         try:
-            # A failed attempt adds nothing to messages, so retrying is safe.
             turn.answer, turn.tool_calls = with_retries(lambda: agent.run(messages))
         except Exception as e:  # a crash is a result to report, not a reason to stop the run
             turn.error = f"{type(e).__name__}: {str(e)[:300]}"

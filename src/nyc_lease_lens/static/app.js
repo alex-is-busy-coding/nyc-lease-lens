@@ -1,4 +1,3 @@
-// Chat page for NYC Lease Lens. Plain JavaScript, no build step.
 // Safety rule: text from users and the server goes in with textContent. The agent's Markdown is the
 // one exception, and it is sanitized with DOMPurify before it becomes HTML.
 

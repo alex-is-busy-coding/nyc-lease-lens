@@ -121,7 +121,7 @@ def test_agent_failures_become_a_message_not_a_500():
         response = http.post("/chat", json={"message": "hi"})
     assert response.status_code == 200
     answer = response.json()["response"]
-    assert "model unavailable" not in answer and "RuntimeError" not in answer  # internals stay in the logs
+    assert "model unavailable" not in answer and "RuntimeError" not in answer
     assert response.headers["X-Request-ID"] in answer  # so a user's report can be matched to the logs
 
 
