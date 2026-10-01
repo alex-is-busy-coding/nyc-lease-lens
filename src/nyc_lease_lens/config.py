@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from typing import Literal
 
@@ -61,3 +62,10 @@ class Settings(BaseModel):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def use_vertex_project(llm: LLMSettings) -> None:
+    """Bill Vertex calls to our project; gcloud user credentials have no quota project by default."""
+    if llm.vertexai_project:
+        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", llm.vertexai_project)
+        os.environ.setdefault("GOOGLE_CLOUD_PROJECT", llm.vertexai_project)

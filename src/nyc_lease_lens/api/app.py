@@ -1,5 +1,4 @@
 import logging
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -11,7 +10,7 @@ from nyc_lease_lens.agent.loop import Agent
 from nyc_lease_lens.agent.sessions import SessionStore
 from nyc_lease_lens.api.middleware import log_requests
 from nyc_lease_lens.api.routes import REVALIDATE, STATIC_DIR, router
-from nyc_lease_lens.config import LLMSettings, Settings, get_settings
+from nyc_lease_lens.config import Settings, get_settings, use_vertex_project
 from nyc_lease_lens.data.client import OpenDataClient
 from nyc_lease_lens.observability.log import configure_logging
 from nyc_lease_lens.tools import build_registry
@@ -37,7 +36,7 @@ def create_app(
     """Build the app. Tests can pass their own settings, Open Data client or agent."""
     settings = settings or get_settings()
     configure_logging(settings.logging.level, settings.logging.format)
-    _use_vertex_project(settings.llm)
+    use_vertex_project(settings.llm)
 
     client = client or OpenDataClient.from_settings(settings.opendata)
     agent = agent or Agent(
@@ -70,10 +69,3 @@ def create_app(
     app.include_router(router)
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     return app
-
-
-def _use_vertex_project(llm: LLMSettings) -> None:
-    # Bill Vertex calls to our project; gcloud user credentials have no quota project by default.
-    if llm.vertexai_project:
-        os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", llm.vertexai_project)
-        os.environ.setdefault("GOOGLE_CLOUD_PROJECT", llm.vertexai_project)

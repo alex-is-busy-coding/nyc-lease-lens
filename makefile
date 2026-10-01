@@ -6,7 +6,7 @@ endif
 UV_RUN := uv run
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env install login gcp-setup auth-check run dev lint format typecheck test coverage check docs clean require-gcloud
+.PHONY: help setup env install login gcp-setup auth-check run dev lint format typecheck test coverage eval check docs clean require-gcloud
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -59,6 +59,9 @@ test: ## Run the test suite (offline, a few seconds)
 
 coverage: ## Run the tests with a coverage report (HTML in htmlcov/)
 	$(UV_RUN) pytest --cov --cov-report=term --cov-report=html
+
+eval: .env ## Evaluate the agent with the real model (needs Google Cloud; a few minutes)
+	$(UV_RUN) python -m evals --repeat 3
 
 check: ## Run every pre-commit hook on all files
 	$(UV_RUN) pre-commit run --all-files

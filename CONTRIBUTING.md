@@ -190,6 +190,20 @@ UPDATE_GOLDEN=1 uv run pytest tests/test_tools_golden.py
 
 **Warnings are errors** in tests, so a new deprecation gets fixed rather than ignored.
 
+## Evaluating the agent
+
+Tests check the code; evals check the **agent's behavior** with the real model. `make eval` runs every scenario in `evals/cases.py` three times (the model varies) and writes a JSON report with full transcripts to `evals/results/`.
+
+- **The data is fixed, the model is real.** Tools read the same recorded Open Data responses as the tests, with the clock set to the recording day, so differences between runs come from the model. A query that wasn't recorded falls back to the live API and is counted in the report.
+- **Checks** (`evals/checks.py`):
+  - **Tool use:** `calls`, `calls_no_tools`, `does_not_call`
+  - **Wording:** `mentions` and `avoids`, both regular expressions
+  - **Grounding:** `grounded` fails if the answer contains a number that isn't in the tool results. That catches invented figures and unsourced claims. Round figures within 10% of the data, list numbering and names such as "7A" are allowed.
+  - **Judgement:** `judged` asks the model a yes/no question about the conversation.
+- **When you change the system prompt, a tool description or the model,** run `make eval` before and after and compare the pass rates. A drop in one scenario is a regression, even if others improve.
+- **When a check fails, read the transcript before changing anything.** Sometimes the check is wrong, for example an answer that's correct but worded differently than the regular expression expects. Fix the check, not the agent, in that case.
+- Evals need Google Cloud credentials and cost model calls, so they don't run in CI.
+
 ## Changing the score
 
 Every red flag is a `Rule` in `RULES` in `src/nyc_lease_lens/scoring/red_flags.py`; the types and the code that applies them are in `scoring/engine.py`. A rule has:

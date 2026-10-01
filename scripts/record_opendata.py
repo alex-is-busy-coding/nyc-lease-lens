@@ -14,36 +14,16 @@ import os
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Any
 
 os.environ.setdefault("LITELLM_MODE", "PRODUCTION")
 
 from nyc_lease_lens.config import get_settings  # noqa: E402
-from nyc_lease_lens.data.client import OpenDataClient  # noqa: E402
+from nyc_lease_lens.data.recording import RecordingClient  # noqa: E402
 from nyc_lease_lens.tools import build_registry  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "tests" / "fixtures" / "opendata.json.gz"
 logger = logging.getLogger("record_opendata")
-
-
-class RecordingClient(OpenDataClient):
-    """Calls the live APIs and keeps every response, keyed the way the tests' ReplayClient looks them up."""
-
-    def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs)
-        self.recorded: dict[str, Any] = {}
-
-    def geosearch(self, text: str, size: int = 10) -> list[dict]:
-        response = super().geosearch(text, size)
-        self.recorded[json.dumps(["geosearch", None, {"text": text, "size": size}], sort_keys=True)] = response
-        return response
-
-    def socrata(self, dataset: Any, params: dict) -> list[dict]:
-        response = super().socrata(dataset, params)
-        key = json.dumps(["socrata", getattr(dataset, "id", dataset), params], sort_keys=True, default=str)
-        self.recorded[key] = json.loads(json.dumps(response))  # a copy, before tools annotate the rows
-        return response
 
 
 def golden_cases() -> list[tuple[str, dict]]:
