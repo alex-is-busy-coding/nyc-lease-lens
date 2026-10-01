@@ -49,19 +49,25 @@ def test_page_loads_its_stylesheet_and_script(http):
         assert response.status_code == 200 and kind in response.headers["content-type"]
 
 
-@pytest.mark.parametrize("url", ["/", "/static/app.js", "/static/app.css", "/static/nyc_lease_lens_logo.jpeg"])
+@pytest.mark.parametrize(
+    "url", ["/", "/static/app.js", "/static/app.css", "/static/assets/logo.jpeg", "/static/assets/favicon.ico"]
+)
 def test_browsers_check_for_updates_before_reusing_the_page(http, url):
     assert http.get(url).headers["cache-control"] == "no-cache"
 
 
-@pytest.mark.parametrize("url", ["/static/app.js", "/static/app.css", "/static/nyc_lease_lens_logo.jpeg"])
+@pytest.mark.parametrize(
+    "url", ["/static/app.js", "/static/app.css", "/static/assets/logo.jpeg", "/static/assets/favicon.ico"]
+)
 def test_unchanged_static_files_revalidate_with_a_304(http, url):
     etag = http.get(url).headers["etag"]
     assert http.get(url, headers={"If-None-Match": etag}).status_code == 304
 
 
 def test_page_has_a_favicon(http):
-    assert '<link rel="icon" href="/static/nyc_lease_lens_logo.jpeg"' in http.get("/").text
+    assert '<link rel="icon" href="/static/assets/favicon.ico"' in http.get("/").text
+    icon = http.get("/static/assets/favicon.ico")
+    assert icon.status_code == 200 and icon.content[:4] == b"\x00\x00\x01\x00"  # an .ico file
 
 
 def test_cdn_scripts_are_pinned_and_integrity_checked():
@@ -82,7 +88,7 @@ def test_answers_only_reach_the_page_through_dompurify():
 def test_serves_the_chat_page_and_logo(http):
     page = http.get("/")
     assert page.status_code == 200 and "Welcome to NYC Lease Lens" in page.text
-    logo = http.get("/static/nyc_lease_lens_logo.jpeg")
+    logo = http.get("/static/assets/logo.jpeg")
     assert logo.status_code == 200 and logo.headers["content-type"] == "image/jpeg"
 
 

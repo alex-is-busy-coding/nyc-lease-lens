@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/nyc_lease_lens/static/nyc_lease_lens_logo.jpeg" alt="NYC Lease Lens logo" width="480">
+  <img src="src/nyc_lease_lens/static/assets/logo.jpeg" alt="NYC Lease Lens logo" width="480">
 </p>
 
 # NYC Lease Lens

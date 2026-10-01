@@ -32,7 +32,7 @@ src/nyc_lease_lens/
   scoring/         red flags and good signs (red_flags.py), the rule types and how they're applied (engine.py)
   data/            Open Data client, dataset registry, SoQL and parsing helpers
   observability/   logging setup and the request-ID context
-  static/          the chat page: index.html (layout, welcome text), app.css, app.js (no build step), logo
+  static/          the chat page: index.html (layout, welcome text), app.css, app.js (no build step), assets/ (logo, favicon)
 scripts/           developer scripts (README table generator)
 .github/workflows  CI checks and README table updates
 ```
