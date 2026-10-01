@@ -1,14 +1,19 @@
 import json
 import logging
+import re
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
+
+import requests
 
 from nyc_lease_lens.datasets import Dataset
 from nyc_lease_lens.log import ms_since
 from nyc_lease_lens.opendata import OpenDataClient
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class ToolError(Exception):
@@ -20,6 +25,7 @@ class Tool(ABC):
     description: str
     parameters: dict
     data_sources: tuple[Dataset, ...] = ()  # what the tool reads; the README data table uses this
+    error_label = "Open Data lookup"  # failed requests become "<error_label> failed: <reason>"
 
     def __init__(self, client: OpenDataClient):
         self.client = client
@@ -34,6 +40,33 @@ class Tool(ABC):
 
     @abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]: ...
+
+    def query(self, dataset: Dataset, params: dict) -> list[dict]:
+        """Run a SoQL query. A failed request becomes a ToolError the model can explain."""
+        return self.fetch(self.client.socrata, dataset, params)
+
+    def query_in(self, dataset: Dataset, field: str, values: list[str], params: dict) -> list[dict]:
+        """query() filtered to `field IN (values)`, for any number of values."""
+        return self.fetch(self.client.socrata_in, dataset, field, values, params)
+
+    def fetch(self, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+        """Call any Open Data helper, turning a failed request into a ToolError."""
+        try:
+            return fn(*args, **kwargs)
+        except requests.RequestException as e:
+            raise ToolError(f"{self.error_label} failed: {e}") from e
+
+    @staticmethod
+    def validate_bbl(bbl: str) -> str:
+        if not re.fullmatch(r"\d{10}", bbl):
+            raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
+        return bbl
+
+    @staticmethod
+    def validate_bin(bin: str) -> str:
+        if not re.fullmatch(r"\d{7}", bin):
+            raise ToolError(f"'{bin}' is not a 7-digit BIN. Call lookup_building first.")
+        return bin
 
 
 class ToolRegistry:

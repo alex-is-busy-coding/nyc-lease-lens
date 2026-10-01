@@ -5,8 +5,6 @@ from collections.abc import Iterable
 from datetime import date, timedelta
 from typing import Any
 
-import requests
-
 from nyc_lease_lens import datasets
 from nyc_lease_lens.rules import VIOLATION_MONTHS, VIOLATION_SAMPLE_ROWS
 from nyc_lease_lens.tools.base import Tool, ToolError
@@ -33,6 +31,7 @@ class GetHpdViolations(Tool):
     """Summarize a building's HPD housing code violations by class, status and type."""
 
     name = "get_hpd_violations"
+    error_label = "HPD violations lookup"
     data_sources = (datasets.HPD_VIOLATIONS,)
     description = (
         "Summarize HPD housing code violations for a building, by severity class and type "
@@ -52,28 +51,50 @@ class GetHpdViolations(Tool):
     }
 
     def run(self, bbl: str, months: int = VIOLATION_MONTHS.default) -> dict[str, Any]:
-        if not re.fullmatch(r"\d{10}", bbl):
-            raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
+        bbl = self.validate_bbl(bbl)
         months = VIOLATION_MONTHS.clamp(months)
-        since = date.today() - timedelta(days=round(months * 30.44))
+        since = (date.today() - timedelta(days=round(months * 30.44))).isoformat()
+        # Everything still open, of any age, plus everything issued in the window.
+        where = f"bbl='{bbl}' AND (inspectiondate >= '{since}' OR violationstatus='Open')"
 
-        where = f"bbl='{bbl}' AND (inspectiondate >= '{since.isoformat()}' OR violationstatus='Open')"
-        groups = self._query(
-            {
-                "$select": f"class, violationstatus, rentimpairing, "
-                f"case(inspectiondate >= '{since.isoformat()}', 'recent', true, 'older') AS period, "
-                f"count(*) AS n",
-                "$where": where,
-                "$group": "class, violationstatus, rentimpairing, period",
-            }
-        )
-        result: dict[str, Any] = {"bbl": bbl, "counting_since": since.isoformat()}
+        result: dict[str, Any] = {"bbl": bbl, "counting_since": since}
+        groups = self._class_counts(where, since)
         if not groups:
             result["notes"] = ["No open HPD violations, and none issued in this period."]
             return result
 
         notes: list[str] = []
-        rows = self._optional_query(
+        rows = self._recent_violations(where, notes)
+        oldest = self._oldest_open_hazard(bbl, notes)
+        for row in rows + oldest:
+            _annotate(row, since)
+
+        result |= _summarize(groups, rows, oldest, months)
+        notes += _lot_notes(rows, result)
+        if notes:
+            result["notes"] = notes
+        logger.debug(
+            "violations summarized",
+            extra={"bbl": bbl, "open": result["open_now"].get("total"), "open_c": result["open_now"].get("C", 0)},
+        )
+        return result
+
+    def _class_counts(self, where: str, since: str) -> list[dict]:
+        """Exact counts by class, status, rent impairment and period, however large the building."""
+        return self.query(
+            datasets.HPD_VIOLATIONS,
+            {
+                "$select": f"class, violationstatus, rentimpairing, "
+                f"case(inspectiondate >= '{since}', 'recent', true, 'older') AS period, "
+                f"count(*) AS n",
+                "$where": where,
+                "$group": "class, violationstatus, rentimpairing, period",
+            },
+        )
+
+    def _recent_violations(self, where: str, notes: list[str]) -> list[dict]:
+        """The most recent violations, for categories and examples."""
+        return self._optional_query(
             notes,
             "categories and examples",
             {
@@ -83,7 +104,10 @@ class GetHpdViolations(Tool):
                 "$limit": VIOLATION_SAMPLE_ROWS,
             },
         )
-        oldest = self._optional_query(
+
+    def _oldest_open_hazard(self, bbl: str, notes: list[str]) -> list[dict]:
+        """Queried on its own: with rows sorted newest first, the oldest can fall past the sample."""
+        return self._optional_query(
             notes,
             "the oldest open violation",
             {
@@ -94,54 +118,48 @@ class GetHpdViolations(Tool):
                 "$limit": 1,
             },
         )
-        for row in rows + oldest:
-            row["inspectiondate"] = row.get("inspectiondate", "")
-            row["_open"] = row.get("violationstatus") == "Open"
-            row["_recent"] = row["inspectiondate"][:10] >= since.isoformat()
-            row["_category"] = _categorize(row.get("novdescription", ""))
-
-        open_rows = [r for r in rows if r["_open"]]
-        result |= {
-            "open_now": _sum_by_class(g for g in groups if g["violationstatus"] == "Open"),
-            f"issued_last_{months}_months": _sum_by_class(g for g in groups if g["period"] == "recent"),
-            "rent_impairing_open": sum(
-                int(g["n"]) for g in groups if g["violationstatus"] == "Open" and g.get("rentimpairing") == "Y"
-            ),
-            "categories": _categories(open_rows, [r for r in rows if r["_recent"]]),
-            "oldest_open_hazardous": _oldest_hazard(oldest[0]) if oldest else None,
-            "latest_open_class_c": [_example(r) for r in open_rows if r.get("class") == "C"][:5],
-        }
-
-        addresses = sorted({f"{r.get('housenumber', '')} {r.get('streetname', '')}".strip() for r in rows})
-        if len(addresses) > 1:
-            result["addresses_on_lot"] = addresses[:10]
-            notes.append(f"This tax lot has {len(addresses)} addresses; counts cover all of them.")
-        if len(rows) >= VIOLATION_SAMPLE_ROWS:
-            notes.append(
-                f"Class counts are exact; categories are based on the {VIOLATION_SAMPLE_ROWS} "
-                "most recent violations only."
-            )
-        if notes:
-            result["notes"] = notes
-        logger.debug(
-            "violations summarized",
-            extra={"bbl": bbl, "open": result["open_now"].get("total"), "open_c": result["open_now"].get("C", 0)},
-        )
-        return result
-
-    def _query(self, params: dict) -> list[dict]:
-        try:
-            return self.client.socrata(datasets.HPD_VIOLATIONS.id, params)
-        except requests.RequestException as e:
-            raise ToolError(f"HPD violations lookup failed: {e}") from e
 
     def _optional_query(self, notes: list[str], what: str, params: dict) -> list[dict]:
         try:
-            return self._query(params)
+            return self.query(datasets.HPD_VIOLATIONS, params)
         except ToolError as e:
             logger.warning("optional violations query failed", extra={"query": what, "error": str(e)[:200]})
             notes.append(f"Could not load {what} (NYC Open Data was slow); the class counts are complete.")
             return []
+
+
+def _annotate(row: dict, since: str) -> None:
+    row["inspectiondate"] = row.get("inspectiondate", "")
+    row["_open"] = row.get("violationstatus") == "Open"
+    row["_recent"] = row["inspectiondate"][:10] >= since
+    row["_category"] = _categorize(row.get("novdescription", ""))
+
+
+def _summarize(groups: list[dict], rows: list[dict], oldest: list[dict], months: int) -> dict[str, Any]:
+    open_rows = [r for r in rows if r["_open"]]
+    return {
+        "open_now": _sum_by_class(g for g in groups if g["violationstatus"] == "Open"),
+        f"issued_last_{months}_months": _sum_by_class(g for g in groups if g["period"] == "recent"),
+        "rent_impairing_open": sum(
+            int(g["n"]) for g in groups if g["violationstatus"] == "Open" and g.get("rentimpairing") == "Y"
+        ),
+        "categories": _categories(open_rows, [r for r in rows if r["_recent"]]),
+        "oldest_open_hazardous": _oldest_hazard(oldest[0]) if oldest else None,
+        "latest_open_class_c": [_example(r) for r in open_rows if r.get("class") == "C"][:5],
+    }
+
+
+def _lot_notes(rows: list[dict], result: dict[str, Any]) -> list[str]:
+    notes = []
+    addresses = sorted({f"{r.get('housenumber', '')} {r.get('streetname', '')}".strip() for r in rows})
+    if len(addresses) > 1:
+        result["addresses_on_lot"] = addresses[:10]
+        notes.append(f"This tax lot has {len(addresses)} addresses; counts cover all of them.")
+    if len(rows) >= VIOLATION_SAMPLE_ROWS:
+        notes.append(
+            f"Class counts are exact; categories are based on the {VIOLATION_SAMPLE_ROWS} most recent violations only."
+        )
+    return notes
 
 
 def _categorize(description: str) -> str:

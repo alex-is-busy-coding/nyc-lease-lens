@@ -6,6 +6,7 @@ import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.opendata import OpenDataClient
+from nyc_lease_lens.parsing import to_int
 from nyc_lease_lens.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class LookupBuilding(Tool):
     """Resolve an NYC address to its BBL/BIN and basic building facts."""
 
     name = "lookup_building"
+    error_label = "Address lookup"
     data_sources = (datasets.GEOSEARCH, datasets.PLUTO, datasets.HPD_BUILDINGS)
     description = (
         "Identify an NYC building from a street address. Returns its BBL (tax lot ID) and BIN "
@@ -70,10 +72,7 @@ class LookupBuilding(Tool):
         return place
 
     def _find_candidates(self, address: str, borough: str | None) -> list[dict]:
-        try:
-            features = self.client.geosearch(address)
-        except requests.RequestException as e:
-            raise ToolError(f"Address lookup failed: {e}") from e
+        features = self.fetch(self.client.geosearch, address)
 
         zip_code = re.search(r"\b1\d{4}\b", address)
         return [
@@ -87,7 +86,7 @@ class LookupBuilding(Tool):
     def _building_facts(self, bbl: str, bin: str | None) -> tuple[dict | None, list[str]]:
         notes = []
         try:
-            rows = self.client.socrata(datasets.PLUTO.id, {"$where": f"bbl={bbl}"})
+            rows = self.client.socrata(datasets.PLUTO, {"$where": f"bbl={bbl}"})
         except requests.RequestException as e:
             rows = []
             notes.append(f"PLUTO lookup failed ({e}).")
@@ -101,10 +100,10 @@ class LookupBuilding(Tool):
         if rows:
             row = rows[0]
             building = {
-                "year_built": _int(row.get("yearbuilt")) or None,  # PLUTO uses 0 for unknown
-                "floors": _int(row.get("numfloors")),
-                "residential_units_on_lot": _int(row.get("unitsres")),
-                "total_units_on_lot": _int(row.get("unitstotal")),
+                "year_built": to_int(row.get("yearbuilt")) or None,  # PLUTO uses 0 for unknown
+                "floors": to_int(row.get("numfloors")),
+                "residential_units_on_lot": to_int(row.get("unitsres")),
+                "total_units_on_lot": to_int(row.get("unitstotal")),
                 "building_class": row.get("bldgclass"),
                 "owner_of_record": row.get("ownername"),
             }
@@ -142,15 +141,15 @@ class LookupBuilding(Tool):
 def hpd_apartments(client: OpenDataClient, bin: str) -> int | None:
     """Legal apartment count for one building from HPD's register. BINs survive lot renumbering."""
     rows = client.socrata(
-        datasets.HPD_BUILDINGS.id, {"$select": "legalclassa", "$where": f"bin='{bin}' AND recordstatus='Active'"}
+        datasets.HPD_BUILDINGS, {"$select": "legalclassa", "$where": f"bin='{bin}' AND recordstatus='Active'"}
     )
-    return sum(_int(r.get("legalclassa")) or 0 for r in rows) or None
+    return sum(to_int(r.get("legalclassa")) or 0 for r in rows) or None
 
 
 def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
     """The BBL plus any older numbers for the same lot. HPD keeps the old block/lot on violations."""
     rows = client.socrata(
-        datasets.HPD_VIOLATIONS.id,
+        datasets.HPD_VIOLATIONS,
         {"$select": "boroid, block, lot", "$where": f"bbl='{bbl}'", "$group": "boroid, block, lot"},
     )
     aliases = {bbl}
@@ -163,11 +162,7 @@ def lot_aliases(client: OpenDataClient, bbl: str) -> list[str]:
 def hpd_units_on_lots(client: OpenDataClient, bbls: list[str]) -> int:
     lots = " OR ".join(f"(boroid='{b[0]}' AND block='{int(b[1:6])}' AND lot='{int(b[6:])}')" for b in bbls)
     rows = client.socrata(
-        datasets.HPD_BUILDINGS.id,
+        datasets.HPD_BUILDINGS,
         {"$select": "legalclassa", "$where": f"({lots}) AND recordstatus='Active'", "$limit": 5000},
     )
-    return sum(_int(r.get("legalclassa")) or 0 for r in rows)
-
-
-def _int(value: str | None) -> int | None:
-    return int(float(value)) if value else None
+    return sum(to_int(r.get("legalclassa")) or 0 for r in rows)

@@ -96,6 +96,8 @@ Tools are how the agent gets facts. Each one is a class in its own module under 
    ```python
    class GetSomething(Tool):
        name = "get_something"
+       error_label = "Something lookup"  # failed requests become "Something lookup failed: ..."
+       data_sources = (datasets.SOMETHING,)
        description = "One sentence the README shows. Then everything the model needs to use it well."
        parameters = {
            "type": "object",
@@ -103,10 +105,18 @@ Tools are how the agent gets facts. Each one is a class in its own module under 
            "required": ["bbl"],
        }
 
-       def run(self, bbl: str) -> dict[str, Any]: ...
+       def run(self, bbl: str) -> dict[str, Any]:
+           bbl = self.validate_bbl(bbl)
+           rows = self.query(datasets.SOMETHING, {"$where": f"bbl='{bbl}'", "$select": "count(*) AS n"})
+           return {"bbl": bbl, "count": to_int(rows[0]["n"]) if rows else 0}
    ```
 
-   `self.client` is the shared `OpenDataClient`. Return a plain dict; the registry turns it into JSON for the model.
+   The base class provides what every tool needs:
+   - `self.query(dataset, params)` runs a SoQL query, and `self.query_in(dataset, field, values, params)` filters on a list of any length. Both turn a failed request into a `ToolError`. For the other helpers in `tools/building.py`, such as `lot_aliases`, use `self.fetch(lot_aliases, self.client, bbl)`.
+   - `self.validate_bbl()` / `self.validate_bin()` check IDs before they go into a query.
+   - Build query fragments with `nyc_lease_lens.soql` (`quote`, `in_list`) and parse values with `nyc_lease_lens.parsing` (`to_int`, `to_date`) rather than by hand.
+
+   Return a plain dict; the registry turns it into JSON for the model.
 2. List the datasets it reads in `data_sources` (see [Data sources](#data-sources) below).
 3. Add the class to `TOOL_CLASSES` in `tools/__init__.py`.
 4. Update `SYSTEM_PROMPT` in `agent.py` if the agent should call it at a specific point.
@@ -122,7 +132,7 @@ These come from problems we hit with NYC Open Data:
 - **Degrade instead of failing.** Socrata response times spike; `OpenDataClient` retries, but if a non-essential query still fails, return what you have with a note, as `get_hpd_violations` does.
 - **Explain caveats in a `notes` list** so the model can pass them on: multi-building lots, capped samples, missing data.
 - **Watch for renumbered lots.** A lot's BBL can change, and datasets update at different times: 311 keeps complaints under the old BBL, and PLUTO can show 0 units. Use `lot_aliases()` for lot-level queries and the BIN for building-level ones.
-- **Validate inputs** such as a 10-digit BBL before building queries from them.
+- **Validate inputs** such as a 10-digit BBL before building queries from them (`validate_bbl`, `validate_bin`), and quote strings with `soql.quote`.
 
 ### Addresses to test with
 

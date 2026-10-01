@@ -1,14 +1,12 @@
 import logging
-import re
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from statistics import median
 from typing import Any
 
-import requests
-
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.parsing import to_int
 from nyc_lease_lens.rules import (
     COMPLAINT_MONTHS,
     HEAT_SEASONS,
@@ -16,7 +14,8 @@ from nyc_lease_lens.rules import (
     HEATING_SEASON_LAST_MONTH,
     NEIGHBOR_RADIUS_M,
 )
-from nyc_lease_lens.tools.base import Tool, ToolError
+from nyc_lease_lens.soql import in_list
+from nyc_lease_lens.tools.base import Tool
 from nyc_lease_lens.tools.building import hpd_units_on_lots, lot_aliases
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class Get311Complaints(Tool):
     """Summarize 311 complaints at a building and compare it with nearby buildings."""
 
     name = "get_311_complaints"
+    error_label = "311 complaints lookup"
     data_sources = (datasets.SERVICE_REQUESTS, datasets.PLUTO, datasets.HPD_BUILDINGS, datasets.HPD_VIOLATIONS)
     description = (
         "Summarize 311 complaints about a building (heat/hot water, pests, mold, leaks, noise, "
@@ -75,30 +75,16 @@ class Get311Complaints(Tool):
         radius_m: int = NEIGHBOR_RADIUS_M.default,
         months: int = COMPLAINT_MONTHS.default,
     ) -> dict[str, Any]:
-        if not re.fullmatch(r"\d{10}", bbl):
-            raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
+        bbl = self.validate_bbl(bbl)
         wanted = [c for c in categories or CATEGORIES if c in CATEGORIES] or CATEGORIES
         radius_m = NEIGHBOR_RADIUS_M.clamp(radius_m)
         months = COMPLAINT_MONTHS.clamp(months)
         since = (date.today() - timedelta(days=round(months * 30.44))).isoformat()
-        compare = latitude is not None and longitude is not None
 
         # 311 keeps complaints under a lot's old BBL after it is renumbered.
-        aliases = self._call(lot_aliases, self.client, bbl)
-        ids = ",".join(f"'{b}'" for b in aliases)
-        with ContextThreadPoolExecutor() as pool:
-            building_future = pool.submit(self._counts_by_bbl, f"bbl in ({ids})", since)
-            heat_future = pool.submit(self._heat_days, ids)
-            nearby_future = None
-            if latitude is not None and longitude is not None:
-                nearby_future = pool.submit(
-                    self._counts_by_bbl,
-                    f"within_circle(location, {float(latitude)}, {float(longitude)}, {radius_m}) "
-                    f"AND bbl not in ({ids}) AND bbl IS NOT NULL",
-                    since,
-                )
-            building, heat = building_future.result(), heat_future.result()
-            nearby = nearby_future.result() if nearby_future else {}
+        aliases = self.fetch(lot_aliases, self.client, bbl)
+        center = (latitude, longitude) if latitude is not None and longitude is not None else None
+        building, heat, nearby = self._fetch_counts(aliases, center, radius_m, since)
 
         counts: Counter[str] = sum(building.values(), Counter())
         result: dict[str, Any] = {"bbl": bbl, "counting_since": since}
@@ -109,20 +95,10 @@ class Get311Complaints(Tool):
             notes.append(f"This lot was renumbered; complaints filed under {old} are included.")
 
         if nearby:
-            units = self._residential_units([*aliases, *nearby])
-            own_units = max(units.get(a, 0) for a in aliases) or self._call(hpd_units_on_lots, self.client, aliases)
-            result["compared_with"] = (
-                f"{sum(1 for b in nearby if units.get(b))} residential buildings within {radius_m} m "
-                "that had any 311 complaints"
-            )
-            result["residential_units"] = own_units or None
-            result["categories"] = _compare(counts, own_units, nearby, units, wanted)
-            if not own_units:
-                logger.info("unit count unknown: no per-unit comparison", extra={"bbl": bbl})
-                notes.append("Unit count unknown, so per-unit comparison is unavailable for this building.")
+            result |= self._compare_with_neighbors(bbl, aliases, counts, nearby, radius_m, wanted, notes)
         else:
             result["categories"] = [{"category": c, "complaints": counts[c]} for c in wanted if counts[c]]
-            if not compare:
+            if center is None:
                 notes.append("Pass latitude and longitude to compare with nearby buildings.")
 
         if "heat_hot_water" in wanted:
@@ -139,9 +115,52 @@ class Get311Complaints(Tool):
         )
         return result
 
+    def _fetch_counts(
+        self, aliases: list[str], center: tuple[float, float] | None, radius_m: int, since: str
+    ) -> tuple[dict[str, Counter], list[dict], dict[str, Counter]]:
+        """This building's complaints, its heat complaints by day, and its neighbors' complaints, in parallel."""
+        lots = in_list(aliases)
+        with ContextThreadPoolExecutor() as pool:
+            building = pool.submit(self._counts_by_bbl, f"bbl in {lots}", since)
+            heat = pool.submit(self._heat_days, lots)
+            nearby = None
+            if center is not None:
+                latitude, longitude = center
+                nearby = pool.submit(
+                    self._counts_by_bbl,
+                    f"within_circle(location, {float(latitude)}, {float(longitude)}, {radius_m}) "
+                    f"AND bbl not in {lots} AND bbl IS NOT NULL",
+                    since,
+                )
+            return building.result(), heat.result(), nearby.result() if nearby else {}
+
+    def _compare_with_neighbors(
+        self,
+        bbl: str,
+        aliases: list[str],
+        counts: Counter[str],
+        nearby: dict[str, Counter],
+        radius_m: int,
+        wanted: list[str],
+        notes: list[str],
+    ) -> dict[str, Any]:
+        units = self._residential_units([*aliases, *nearby])
+        own_units = max(units.get(a, 0) for a in aliases) or self.fetch(hpd_units_on_lots, self.client, aliases)
+        if not own_units:
+            logger.info("unit count unknown: no per-unit comparison", extra={"bbl": bbl})
+            notes.append("Unit count unknown, so per-unit comparison is unavailable for this building.")
+        return {
+            "compared_with": (
+                f"{sum(1 for b in nearby if units.get(b))} residential buildings within {radius_m} m "
+                "that had any 311 complaints"
+            ),
+            "residential_units": own_units or None,
+            "categories": _compare(counts, own_units, nearby, units, wanted),
+        }
+
     def _counts_by_bbl(self, where: str, since: str) -> dict[str, Counter]:
-        rows = self._query(
-            datasets.SERVICE_REQUESTS.id,
+        rows = self.query(
+            datasets.SERVICE_REQUESTS,
             {
                 "$select": "bbl, complaint_type, descriptor, count(*) AS n",
                 "$where": f"{where} AND created_date >= '{since}'",
@@ -154,12 +173,12 @@ class Get311Complaints(Tool):
             counts[row["bbl"]][_categorize(row["complaint_type"], row.get("descriptor"))] += int(row["n"])
         return counts
 
-    def _heat_days(self, ids: str) -> list[dict]:
-        return self._query(
-            datasets.SERVICE_REQUESTS.id,
+    def _heat_days(self, lots: str) -> list[dict]:
+        return self.query(
+            datasets.SERVICE_REQUESTS,
             {
                 "$select": "date_trunc_ymd(created_date) AS day, count(*) AS n",
-                "$where": f"bbl in ({ids}) AND complaint_type='HEAT/HOT WATER' "
+                "$where": f"bbl in {lots} AND complaint_type='HEAT/HOT WATER' "
                 f"AND created_date >= '{_season_start(HEAT_SEASONS - 1).isoformat()}'",
                 "$group": "day",
                 "$limit": 5000,
@@ -167,21 +186,12 @@ class Get311Complaints(Tool):
         )
 
     def _residential_units(self, bbls: list[str]) -> dict[str, int]:
-        ids = ",".join(bbls)  # PLUTO stores bbl as a number
-        rows = self._query(
-            datasets.PLUTO.id, {"$select": "bbl, unitsres", "$where": f"bbl in ({ids})", "$limit": len(bbls)}
+        rows = self.query(
+            datasets.PLUTO,
+            # PLUTO stores bbl as a number, so the list is unquoted.
+            {"$select": "bbl, unitsres", "$where": f"bbl in {in_list(bbls, numeric=True)}", "$limit": len(bbls)},
         )
-        return {str(int(float(r["bbl"]))): int(float(r.get("unitsres") or 0)) for r in rows}
-
-    def _query(self, dataset: str, params: dict) -> list[dict]:
-        return self._call(self.client.socrata, dataset, params)
-
-    @staticmethod
-    def _call(fn, *args):
-        try:
-            return fn(*args)
-        except requests.RequestException as e:
-            raise ToolError(f"311 complaints lookup failed: {e}") from e
+        return {str(to_int(r["bbl"])): to_int(r.get("unitsres")) or 0 for r in rows}
 
 
 def _categorize(complaint_type: str, descriptor: str | None) -> str:

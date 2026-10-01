@@ -1,15 +1,14 @@
 import logging
-import re
 from collections import Counter, defaultdict
-from datetime import date, datetime
+from datetime import date
 from typing import Any
-
-import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.parsing import to_date, to_int
 from nyc_lease_lens.rules import BEDBUG_PERIOD_FIRST_MONTH, BEDBUG_PERIODS, HISTORY_YEARS
-from nyc_lease_lens.tools.base import Tool, ToolError
+from nyc_lease_lens.soql import in_list
+from nyc_lease_lens.tools.base import Tool
 from nyc_lease_lens.tools.building import lot_aliases
 
 logger = logging.getLogger(__name__)
@@ -36,6 +35,7 @@ class GetTenantHistory(Tool):
     """Evictions, bedbug reports, housing court cases and vacate orders for a building."""
 
     name = "get_tenant_history"
+    error_label = "Tenant history lookup"
     data_sources = (
         datasets.EVICTIONS,
         datasets.BEDBUGS,
@@ -63,17 +63,13 @@ class GetTenantHistory(Tool):
     }
 
     def run(self, bbl: str, years: int = HISTORY_YEARS.default) -> dict[str, Any]:
-        if not re.fullmatch(r"\d{10}", bbl):
-            raise ToolError(f"'{bbl}' is not a 10-digit BBL. Call lookup_building first.")
+        bbl = self.validate_bbl(bbl)
         years = HISTORY_YEARS.clamp(years)
         today = date.today()
         since = date(today.year - years, today.month, min(today.day, 28)).isoformat()
 
-        try:
-            aliases = lot_aliases(self.client, bbl)
-        except requests.RequestException as e:
-            raise ToolError(f"Tenant history lookup failed: {e}") from e
-        lots = f"bbl in ({','.join(repr(a) for a in aliases)})"
+        aliases = self.fetch(lot_aliases, self.client, bbl)
+        lots = f"bbl in {in_list(aliases)}"
 
         with ContextThreadPoolExecutor() as pool:
             evictions = pool.submit(self._evictions, lots, since)
@@ -116,8 +112,8 @@ class GetTenantHistory(Tool):
         return result
 
     def _evictions(self, lots: str, since: str) -> dict[str, Any]:
-        rows = self._query(
-            datasets.EVICTIONS.id,
+        rows = self.query(
+            datasets.EVICTIONS,
             {
                 "$select": "date_extract_y(executed_date) AS year, count(*) AS n",
                 "$where": f"{lots} AND residential_commercial_ind='Residential' AND executed_date >= '{since}'",
@@ -129,8 +125,8 @@ class GetTenantHistory(Tool):
         return {"total": sum(by_year.values()), "by_year": by_year}
 
     def _bedbugs(self, lots: str) -> list[dict[str, Any]]:
-        rows = self._query(
-            datasets.BEDBUGS.id,
+        rows = self.query(
+            datasets.BEDBUGS,
             {
                 "$select": "building_id, filing_date, filing_period_start_date, filling_period_end_date, "
                 "of_dwelling_units, infested_dwelling_unit_count, eradicated_unit_count, re_infested_dwelling_unit",
@@ -147,10 +143,10 @@ class GetTenantHistory(Tool):
         for (start, _), row in latest.items():
             period = periods[start]
             period["buildings_reporting"] += 1
-            period["apartments"] += _int(row.get("of_dwelling_units"))
-            period["infested"] += _int(row.get("infested_dwelling_unit_count"))
-            period["reinfested"] += _int(row.get("re_infested_dwelling_unit"))
-            period["eradicated"] += _int(row.get("eradicated_unit_count"))
+            period["apartments"] += to_int(row.get("of_dwelling_units")) or 0
+            period["infested"] += to_int(row.get("infested_dwelling_unit_count")) or 0
+            period["reinfested"] += to_int(row.get("re_infested_dwelling_unit")) or 0
+            period["eradicated"] += to_int(row.get("eradicated_unit_count")) or 0
         if not periods:
             return []
         buildings = len({building for _, building in latest})
@@ -162,13 +158,12 @@ class GetTenantHistory(Tool):
         ]
 
     def _court(self, lots: str, since: str) -> dict[str, Any]:
-        found = ",".join(repr(f) for f in HARASSMENT_FOUND)
-        rows = self._query(
-            datasets.LITIGATIONS.id,
+        rows = self.query(
+            datasets.LITIGATIONS,
             {
                 "$select": "casetype, casestatus, caseopendate, findingofharassment, findingdate, penalty",
                 "$where": f"{lots} AND (caseopendate >= '{since}' OR casetype='7A' "
-                f"OR findingofharassment in ({found}))",
+                f"OR findingofharassment in {in_list(HARASSMENT_FOUND)})",
                 "$limit": 5000,
             },
         )
@@ -181,7 +176,7 @@ class GetTenantHistory(Tool):
         findings = [r for r in rows if r.get("findingofharassment") in HARASSMENT_FOUND]
         court["harassment_findings"] = [
             {
-                "decided": _date(r.get("findingdate")) or _date(r.get("caseopendate")),
+                "decided": to_date(r.get("findingdate")) or to_date(r.get("caseopendate")),
                 "how": r["findingofharassment"].lower(),
                 "penalty": int(float(r["penalty"])) if r.get("penalty") else None,
             }
@@ -191,13 +186,13 @@ class GetTenantHistory(Tool):
         if administrators:
             court["court_appointed_administrator"] = {
                 "cases": len(administrators),
-                "opened": sorted(d for r in administrators if (d := _date(r.get("caseopendate")))),
+                "opened": sorted(d for r in administrators if (d := to_date(r.get("caseopendate")))),
             }
         return court
 
     def _vacates(self, lots: str, since: str) -> dict[str, Any]:
-        rows = self._query(
-            datasets.VACATE_ORDERS.id,
+        rows = self.query(
+            datasets.VACATE_ORDERS,
             {
                 "$select": "house_number, street_name, primary_vacate_reason, vacate_type, "
                 "vacate_effective_date, actual_rescind_date, number_of_vacated_units",
@@ -207,26 +202,20 @@ class GetTenantHistory(Tool):
         )
         active, rescinded = [], 0
         for row in rows:
-            effective, rescind = _date(row.get("vacate_effective_date")), _date(row.get("actual_rescind_date"))
+            effective, rescind = to_date(row.get("vacate_effective_date")), to_date(row.get("actual_rescind_date"))
             if not rescind or (effective and rescind < effective):
                 active.append(
                     {
                         "since": effective,
                         "reason": row.get("primary_vacate_reason"),
                         "scope": row.get("vacate_type"),
-                        "units": _int(row.get("number_of_vacated_units")) or None,
+                        "units": to_int(row.get("number_of_vacated_units")) or None,
                         "address": f"{row.get('house_number', '')} {row.get('street_name', '')}".strip().title(),
                     }
                 )
             elif effective and effective >= since:
                 rescinded += 1
         return {"in_effect": active, "rescinded_since": rescinded}
-
-    def _query(self, dataset: str, params: dict) -> list[dict]:
-        try:
-            return self.client.socrata(dataset, params)
-        except requests.RequestException as e:
-            raise ToolError(f"Tenant history lookup failed: {e}") from e
 
 
 def _due_bedbug_periods() -> list[str]:
@@ -237,19 +226,3 @@ def _due_bedbug_periods() -> list[str]:
     """
     latest = date.today().year - 2
     return [date(latest - i, BEDBUG_PERIOD_FIRST_MONTH, 1).isoformat() for i in range(BEDBUG_PERIODS)]
-
-
-def _int(value: str | None) -> int:
-    try:
-        return int(float(value or 0))
-    except ValueError:
-        return 0
-
-
-def _date(value: str | None) -> str | None:
-    """Socrata dates are ISO timestamps, except litigation finding dates (MM/DD/YYYY)."""
-    if not value:
-        return None
-    if re.match(r"\d{2}/\d{2}/\d{4}", value):
-        return datetime.strptime(value[:10], "%m/%d/%Y").date().isoformat()
-    return value[:10]

@@ -6,9 +6,13 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from nyc_lease_lens.config import OpenDataSettings
+from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.datasets import Dataset
 from nyc_lease_lens.log import ms_since
+from nyc_lease_lens.soql import in_list
 
 logger = logging.getLogger(__name__)
+IN_CHUNK = 300  # values per `IN (...)` query, to keep request URLs short
 
 
 class OpenDataClient:
@@ -45,9 +49,26 @@ class OpenDataClient:
         """Search NYC addresses. Returns GeoJSON features, best match first."""
         return self._get("geosearch", self.geosearch_url, {"text": text, "size": size})["features"]
 
-    def socrata(self, dataset: str, params: dict) -> list[dict]:
+    def socrata(self, dataset: Dataset | str, params: dict) -> list[dict]:
         """Run a SoQL query against an NYC Open Data dataset."""
-        return self._get(dataset, self.socrata_url.format(dataset=dataset), params)
+        dataset_id = dataset.id if isinstance(dataset, Dataset) else dataset
+        return self._get(dataset_id, self.socrata_url.format(dataset=dataset_id), params)
+
+    def socrata_in(self, dataset: Dataset | str, field: str, values: list[str], params: dict) -> list[dict]:
+        """socrata() filtered to `field IN (values)`, split into parallel queries for long lists.
+
+        Any `$where` in params is kept and combined with the IN filter.
+        """
+        chunks = [values[i : i + IN_CHUNK] for i in range(0, len(values), IN_CHUNK)]
+
+        def fetch(chunk: list[str]) -> list[dict]:
+            where = f"{field} in {in_list(chunk)}"
+            if extra := params.get("$where"):
+                where = f"{extra} AND {where}"
+            return self.socrata(dataset, params | {"$where": where, "$limit": 50000})
+
+        with ContextThreadPoolExecutor(max_workers=4) as pool:
+            return [row for rows in pool.map(fetch, chunks) for row in rows]
 
     def _get(self, source: str, url: str, params: dict):
         started = time.perf_counter()

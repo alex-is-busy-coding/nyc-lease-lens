@@ -7,18 +7,19 @@ import requests
 
 from nyc_lease_lens import datasets
 from nyc_lease_lens.context import ContextThreadPoolExecutor
+from nyc_lease_lens.parsing import to_int
 from nyc_lease_lens.rules import PORTFOLIO_MAX_REGISTRATIONS
-from nyc_lease_lens.tools.base import Tool, ToolError
+from nyc_lease_lens.soql import quote
+from nyc_lease_lens.tools.base import Tool
 
 logger = logging.getLogger(__name__)
-
-CHUNK = 300  # IDs per query, to keep request URLs short
 
 
 class GetLandlordProfile(Tool):
     """Identify who owns and manages a building, and how their other buildings are kept."""
 
     name = "get_landlord_profile"
+    error_label = "Landlord lookup"
     data_sources = (
         datasets.HPD_REGISTRATIONS,
         datasets.HPD_CONTACTS,
@@ -43,11 +44,9 @@ class GetLandlordProfile(Tool):
     _registrations_as_of: str | None = None
 
     def run(self, bin: str) -> dict[str, Any]:
-        if not re.fullmatch(r"\d{7}", bin):
-            raise ToolError(f"'{bin}' is not a 7-digit BIN. Call lookup_building first.")
-
-        registrations = self._query(
-            datasets.HPD_REGISTRATIONS.id,
+        bin = self.validate_bin(bin)
+        registrations = self.query(
+            datasets.HPD_REGISTRATIONS,
             {"$where": f"bin='{bin}'", "$order": "lastregistrationdate DESC", "$limit": 1},
         )
         if not registrations:
@@ -62,9 +61,7 @@ class GetLandlordProfile(Tool):
             }
 
         registration = registrations[0]
-        contacts = self._query(
-            datasets.HPD_CONTACTS.id, {"$where": f"registrationid='{registration['registrationid']}'"}
-        )
+        contacts = self.query(datasets.HPD_CONTACTS, {"$where": f"registrationid='{registration['registrationid']}'"})
         people = _key_contacts(contacts)
         result: dict[str, Any] = {"bin": bin, "registration": _registration_status(registration, self._data_as_of())}
         result |= {k: v["label"] for k, v in people.items()}
@@ -75,6 +72,24 @@ class GetLandlordProfile(Tool):
                 "housing court for unpaid rent until they do."
             )
 
+        owner_ids, agent_ids = self._add_portfolios(people, result)
+        if len(owner_ids) >= PORTFOLIO_MAX_REGISTRATIONS or len(agent_ids) >= PORTFOLIO_MAX_REGISTRATIONS:
+            notes.append(f"Portfolio capped at {PORTFOLIO_MAX_REGISTRATIONS} registrations; totals are a lower bound.")
+        if notes:
+            result["notes"] = notes
+        logger.debug(
+            "landlord profiled",
+            extra={
+                "bin": bin,
+                "registration": result["registration"]["status"],
+                "owner_registrations": len(owner_ids),
+                "agent_registrations": len(agent_ids),
+            },
+        )
+        return result
+
+    def _add_portfolios(self, people: dict[str, dict], result: dict[str, Any]) -> tuple[set[str], set[str]]:
+        """Summarize the owner's and the managing agent's portfolios, merged if they're the same buildings."""
         with ContextThreadPoolExecutor() as pool:
             citywide = pool.submit(self._citywide)
             owner = pool.submit(self._portfolio, _owner_filter(people)) if "head_officer" in people else None
@@ -94,29 +109,16 @@ class GetLandlordProfile(Tool):
                 result["management_portfolio"] = self._summarize(agent_regs, rate) | {
                     "linked_by": "same managing agent company"
                 }
-        if len(owner_ids) >= PORTFOLIO_MAX_REGISTRATIONS or len(agent_ids) >= PORTFOLIO_MAX_REGISTRATIONS:
-            notes.append(f"Portfolio capped at {PORTFOLIO_MAX_REGISTRATIONS} registrations; totals are a lower bound.")
-        if notes:
-            result["notes"] = notes
-        logger.debug(
-            "landlord profiled",
-            extra={
-                "bin": bin,
-                "registration": result["registration"]["status"],
-                "owner_registrations": len(owner_ids),
-                "agent_registrations": len(agent_ids),
-            },
-        )
-        return result
+        return owner_ids, agent_ids
 
     def _portfolio(self, where: str) -> tuple[set[str], list[dict]]:
-        rows = self._query(
-            datasets.HPD_CONTACTS.id,
+        rows = self.query(
+            datasets.HPD_CONTACTS,
             {"$select": "distinct registrationid", "$where": where, "$limit": PORTFOLIO_MAX_REGISTRATIONS},
         )
         ids = {r["registrationid"] for r in rows}
-        registrations = self._chunked(
-            datasets.HPD_REGISTRATIONS.id,
+        registrations = self.query_in(
+            datasets.HPD_REGISTRATIONS,
             "registrationid",
             sorted(ids),
             {"$select": "buildingid, housenumber, streetname, boro"},
@@ -128,15 +130,15 @@ class GetLandlordProfile(Tool):
         ids = sorted(buildings)
         with ContextThreadPoolExecutor() as pool:
             units_future = pool.submit(
-                self._chunked,
-                datasets.HPD_BUILDINGS.id,
+                self.query_in,
+                datasets.HPD_BUILDINGS,
                 "buildingid",
                 ids,
                 {"$select": "buildingid, legalclassa", "$where": "recordstatus='Active'"},
             )
             violations_future = pool.submit(
-                self._chunked,
-                datasets.HPD_VIOLATIONS.id,
+                self.query_in,
+                datasets.HPD_VIOLATIONS,
                 "buildingid",
                 ids,
                 {
@@ -146,9 +148,9 @@ class GetLandlordProfile(Tool):
                 },
             )
             aep_future = pool.submit(
-                self._chunked, datasets.AEP.id, "building_id", ids, {"$select": "building_id, current_status"}
+                self.query_in, datasets.AEP, "building_id", ids, {"$select": "building_id, current_status"}
             )
-            units = {r["buildingid"]: int(r.get("legalclassa") or 0) for r in units_future.result()}
+            units = {r["buildingid"]: to_int(r.get("legalclassa")) or 0 for r in units_future.result()}
             open_c = {r["buildingid"]: int(r["n"]) for r in violations_future.result()}
             aep = [r for r in aep_future.result() if "active" in r.get("current_status", "").lower()]
 
@@ -174,11 +176,11 @@ class GetLandlordProfile(Tool):
         if GetLandlordProfile._citywide_rate is None:
             try:
                 violations = self.client.socrata(
-                    datasets.HPD_VIOLATIONS.id,
+                    datasets.HPD_VIOLATIONS,
                     {"$select": "count(*) AS n", "$where": "violationstatus='Open' AND class='C'"},
                 )
                 units = self.client.socrata(
-                    datasets.HPD_BUILDINGS.id, {"$select": "sum(legalclassa) AS n", "$where": "recordstatus='Active'"}
+                    datasets.HPD_BUILDINGS, {"$select": "sum(legalclassa) AS n", "$where": "recordstatus='Active'"}
                 )
                 GetLandlordProfile._citywide_rate = 100 * int(violations[0]["n"]) / float(units[0]["n"])
                 logger.info(
@@ -194,7 +196,7 @@ class GetLandlordProfile(Tool):
         if GetLandlordProfile._registrations_as_of is None:
             try:
                 rows = self.client.socrata(
-                    datasets.HPD_REGISTRATIONS.id, {"$select": "max(lastregistrationdate) AS latest"}
+                    datasets.HPD_REGISTRATIONS, {"$select": "max(lastregistrationdate) AS latest"}
                 )
                 GetLandlordProfile._registrations_as_of = rows[0]["latest"][:10]
                 logger.info("registration data date cached", extra={"as_of": GetLandlordProfile._registrations_as_of})
@@ -202,24 +204,6 @@ class GetLandlordProfile(Tool):
                 logger.warning("registration data date unavailable; using today", extra={"error": repr(e)[:200]})
                 return date.today().isoformat()
         return GetLandlordProfile._registrations_as_of
-
-    def _chunked(self, dataset: str, field: str, values: list[str], params: dict) -> list[dict]:
-        chunks = [values[i : i + CHUNK] for i in range(0, len(values), CHUNK)]
-
-        def fetch(chunk: list[str]) -> list[dict]:
-            where = f"{field} in ({','.join(_quote(v) for v in chunk)})"
-            if extra := params.get("$where"):
-                where = f"{extra} AND {where}"
-            return self._query(dataset, params | {"$where": where, "$limit": 50000})
-
-        with ContextThreadPoolExecutor(max_workers=4) as pool:
-            return [row for rows in pool.map(fetch, chunks) for row in rows]
-
-    def _query(self, dataset: str, params: dict) -> list[dict]:
-        try:
-            return self.client.socrata(dataset, params)
-        except requests.RequestException as e:
-            raise ToolError(f"Landlord lookup failed: {e}") from e
 
 
 def _key_contacts(contacts: list[dict]) -> dict[str, dict]:
@@ -247,21 +231,21 @@ def _owner_filter(people: dict[str, dict]) -> str:
     officer = people["head_officer"]["contact"]
     where = (
         "type in ('HeadOfficer', 'IndividualOwner') "
-        f"AND upper(firstname)={_quote((officer.get('firstname') or '').upper())} "
-        f"AND upper(lastname)={_quote(officer['lastname'].upper())}"
+        f"AND upper(firstname)={quote((officer.get('firstname') or '').upper())} "
+        f"AND upper(lastname)={quote(officer['lastname'].upper())}"
     )
     if officer.get("businesszip"):
-        where += f" AND businesszip={_quote(officer['businesszip'])}"
+        where += f" AND businesszip={quote(officer['businesszip'])}"
     return where
 
 
 def _agent_filter(people: dict[str, dict]) -> str:
     agent = people["managing_agent"]["contact"]
     if corporation := agent.get("corporationname"):
-        return f"type='Agent' AND upper(corporationname)={_quote(corporation.upper())}"
+        return f"type='Agent' AND upper(corporationname)={quote(corporation.upper())}"
     return (
-        f"type='Agent' AND upper(firstname)={_quote((agent.get('firstname') or '').upper())} "
-        f"AND upper(lastname)={_quote((agent.get('lastname') or '').upper())}"
+        f"type='Agent' AND upper(firstname)={quote((agent.get('firstname') or '').upper())} "
+        f"AND upper(lastname)={quote((agent.get('lastname') or '').upper())}"
     )
 
 
@@ -292,7 +276,3 @@ def _person(contact: dict) -> str:
 
 def _clean(name: str | None) -> str:
     return re.sub(r"[^\w&.,' -]", "", name or "").strip()
-
-
-def _quote(value: str) -> str:
-    return "'" + value.replace("'", "''") + "'"
