@@ -49,6 +49,21 @@ def test_page_loads_its_stylesheet_and_script(http):
         assert response.status_code == 200 and kind in response.headers["content-type"]
 
 
+@pytest.mark.parametrize("url", ["/", "/static/app.js", "/static/app.css", "/static/nyc_lease_lens_logo.jpeg"])
+def test_browsers_check_for_updates_before_reusing_the_page(http, url):
+    assert http.get(url).headers["cache-control"] == "no-cache"
+
+
+@pytest.mark.parametrize("url", ["/static/app.js", "/static/app.css", "/static/nyc_lease_lens_logo.jpeg"])
+def test_unchanged_static_files_revalidate_with_a_304(http, url):
+    etag = http.get(url).headers["etag"]
+    assert http.get(url, headers={"If-None-Match": etag}).status_code == 304
+
+
+def test_page_has_a_favicon(http):
+    assert '<link rel="icon" href="/static/nyc_lease_lens_logo.jpeg"' in http.get("/").text
+
+
 def test_cdn_scripts_are_pinned_and_integrity_checked():
     page = (STATIC / "index.html").read_text()
     cdn_scripts = re.findall(r"<script\s+src=\"(https://[^\"]+)\"\s+integrity=\"(sha384-[^\"]+)\"", page)

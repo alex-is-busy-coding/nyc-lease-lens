@@ -10,6 +10,9 @@ from nyc_lease_lens.agent.sessions import SessionStore
 from nyc_lease_lens.api.schemas import ChatRequest, ChatResponse
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
+# Without this, browsers may reuse an old page for hours after a deploy. With it they still cache,
+# but check the ETag first (a cheap 304 when nothing changed).
+REVALIDATE = {"Cache-Control": "no-cache"}
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +33,7 @@ router = APIRouter()
 
 @router.get("/")
 def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers=REVALIDATE)
 
 
 @router.post("/chat", response_model=ChatResponse)
