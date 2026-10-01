@@ -11,6 +11,16 @@ An AI agent that checks any NYC apartment for red flags before you sign the leas
 
 The [live app](https://nyc-lease-lens.cloud.run/) runs on Google Cloud Run and redeploys on every push to `main`. Every question calls a paid model, so a Google sign-in limits access to Columbia accounts. Without one, you can run it yourself with the [Quickstart](#quickstart).
 
+## Try it
+
+These are also the example buttons on the welcome screen:
+
+1. **"Check 157 Ludlow St, Manhattan"**: a grade of B, with the red flags in order of points and the good signs.
+2. **"Check 760 Eldert Lane, Brooklyn"**: a grade of F, led by a vacate order and over a thousand hazardous violations. Then ask a follow-up, such as "What are the open violations there?"
+3. **"Check 350 5th Ave"**: the address exists in Manhattan and Brooklyn, so the agent asks which one you mean.
+
+Open "Tool calls" under an answer to see each tool the agent called, with its arguments and result.
+
 ## Quickstart
 
 Requires [uv](https://docs.astral.sh/uv/) and the [gcloud CLI](https://cloud.google.com/sdk/docs/install) (`brew install --cask google-cloud-sdk`).
@@ -156,6 +166,20 @@ Most of the data comes from HPD, the city's Department of Housing Preservation a
 - **Records are matched by tax lot.** One lot can hold several buildings, in which case the counts cover all of them. When a lot has been renumbered, its records under the old number are included.
 - **Landlord portfolios are linked by name.** Buildings are grouped by the head officer's name and office ZIP, or by the managing agent's company name. This can occasionally group different people who share a name, or miss buildings registered under other names.
 - **This is information, not legal advice.** For help with a landlord, contact 311 or a tenant organization.
+
+## Limitations
+
+**The grading is a judgment call, not a validated model.** The red flags follow what the city itself treats as serious: immediately hazardous (class C) violations, vacate orders, harassment findings, and buildings in the worst-buildings program. The points and thresholds were drafted with an AI coding assistant (Claude) and reviewed by hand, but they haven't been tested against real outcomes, such as whether F buildings later get more vacate orders. Treat a grade as a summary of the public record, not a prediction.
+
+**No records isn't the same as no problems.** A grade of A means no red flags were found. Small buildings (one or two families) don't have to register with HPD and appear in fewer datasets, and problems tenants never report don't show up at all.
+
+**The model can still get things wrong.** The grade is computed by code, and the agent is told to state only facts from the tool results. `make eval` checks this with the real model across 11 scenarios ([evals/cases.py](evals/cases.py)), but that's a sample, not a guarantee.
+
+**It's built for New York City apartment buildings only.** Addresses elsewhere, and buildings with no apartments, get no grade.
+
+**Conversations are kept in memory.** They're lost when the server restarts or redeploys.
+
+For the limits of the city's data itself, see [Limits of the data](#limits-of-the-data).
 
 ## Make targets
 
