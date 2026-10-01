@@ -102,6 +102,21 @@ Each red flag below adds the points shown. Where there are levels, the highest o
 | Apartments with bedbugs in the latest report | 5 at 5%+ of apartments | HPD bedbug reports |
 <!-- weights:end -->
 
+## Tools
+
+The agent calls these tools to check a building. The table is generated from `src/nyc_lease_lens/tools/`; run `make docs` to refresh it.
+
+<!-- tools:start -->
+| Tool | What it does | Parameters |
+| --- | --- | --- |
+| `score_building_risk` | Check an NYC building end to end and grade it from A (no red flags) to F. | `address` (string, required): Street address, e.g. '157 Ludlow St'<br>`borough` (string, optional): Borough, if the user mentioned it or it is clear from context. One of: `Manhattan`, `Bronx`, `Brooklyn`, `Queens`, `Staten Island`. |
+| `lookup_building` | Identify an NYC building from a street address. | `address` (string, required): Street address, e.g. '157 Ludlow St' or '89-11 Queens Blvd'<br>`borough` (string, optional): Borough, if the user mentioned it or it is clear from context. One of: `Manhattan`, `Bronx`, `Brooklyn`, `Queens`, `Staten Island`. |
+| `get_hpd_violations` | Summarize HPD housing code violations for a building, by severity class and type (pests, mold, heat/hot water, lead paint, fire safety, illegal occupancy, ...). | `bbl` (string, required): 10-digit BBL from lookup_building<br>`months` (integer, optional, 1–120): How far back to count violations, open or closed. Default 36. |
+| `get_311_complaints` | Summarize 311 complaints about a building (heat/hot water, pests, mold, leaks, noise, sanitation, repairs) and compare it with nearby buildings per apartment, as a percentile: 90 means more complaints per unit than 90% of nearby buildings. | `bbl` (string, required): 10-digit BBL from lookup_building<br>`latitude` (number, optional): Building latitude from lookup_building<br>`longitude` (number, optional): Building longitude from lookup_building<br>`categories` (string[], optional): Only report these categories. Omit for all. One of: `heat_hot_water`, `pests`, `mold`, `leaks_plumbing`, `noise`, `sanitation`, `repairs`.<br>`radius_m` (integer, optional, 50–500): Radius in meters for the nearby-building comparison. Default 150.<br>`months` (integer, optional, 1–60): How far back to count complaints. Default 24. |
+| `get_landlord_profile` | Identify the building's registered owner, head officer and managing agent from HPD registrations, and summarize their portfolios: how many buildings and apartments they control, open class C (immediately hazardous) violations per 100 apartments compared with the citywide rate, buildings in the city's Alternative Enforcement Program for the worst-maintained buildings, and their worst buildings. | `bin` (string, required): 7-digit BIN from lookup_building |
+| `get_tenant_history` | Summarize what has happened to tenants in a building: executed residential evictions by year, the owner's annual bedbug reports, HPD housing court cases (tenant repair actions, harassment, heat, false repair certifications, court-appointed 7A administrators), harassment findings, and vacate orders that forced tenants out. | `bbl` (string, required): 10-digit BBL from lookup_building<br>`years` (integer, optional, 1–20): How far back to count evictions and court cases. Harassment findings and 7A administrators are reported from any year. Default 5. |
+<!-- tools:end -->
+
 ## Data
 
 Every fact comes from public City of New York records, fetched live when you ask; the app stores none of it. No account or API key is needed for any of these datasets.
@@ -164,21 +179,6 @@ Run `make help` prints the same list.
 | `make docs` | Regenerate the make targets and tools tables in README.md | — |
 | `make clean` | Remove the virtualenv and caches | — |
 <!-- make:end -->
-
-## Tools
-
-The agent calls these tools to check a building. The table is generated from `src/nyc_lease_lens/tools/`; run `make docs` to refresh it.
-
-<!-- tools:start -->
-| Tool | What it does | Parameters |
-| --- | --- | --- |
-| `score_building_risk` | Check an NYC building end to end and grade it from A (no red flags) to F. | `address` (string, required): Street address, e.g. '157 Ludlow St'<br>`borough` (string, optional): Borough, if the user mentioned it or it is clear from context. One of: `Manhattan`, `Bronx`, `Brooklyn`, `Queens`, `Staten Island`. |
-| `lookup_building` | Identify an NYC building from a street address. | `address` (string, required): Street address, e.g. '157 Ludlow St' or '89-11 Queens Blvd'<br>`borough` (string, optional): Borough, if the user mentioned it or it is clear from context. One of: `Manhattan`, `Bronx`, `Brooklyn`, `Queens`, `Staten Island`. |
-| `get_hpd_violations` | Summarize HPD housing code violations for a building, by severity class and type (pests, mold, heat/hot water, lead paint, fire safety, illegal occupancy, ...). | `bbl` (string, required): 10-digit BBL from lookup_building<br>`months` (integer, optional, 1–120): How far back to count violations, open or closed. Default 36. |
-| `get_311_complaints` | Summarize 311 complaints about a building (heat/hot water, pests, mold, leaks, noise, sanitation, repairs) and compare it with nearby buildings per apartment, as a percentile: 90 means more complaints per unit than 90% of nearby buildings. | `bbl` (string, required): 10-digit BBL from lookup_building<br>`latitude` (number, optional): Building latitude from lookup_building<br>`longitude` (number, optional): Building longitude from lookup_building<br>`categories` (string[], optional): Only report these categories. Omit for all. One of: `heat_hot_water`, `pests`, `mold`, `leaks_plumbing`, `noise`, `sanitation`, `repairs`.<br>`radius_m` (integer, optional, 50–500): Radius in meters for the nearby-building comparison. Default 150.<br>`months` (integer, optional, 1–60): How far back to count complaints. Default 24. |
-| `get_landlord_profile` | Identify the building's registered owner, head officer and managing agent from HPD registrations, and summarize their portfolios: how many buildings and apartments they control, open class C (immediately hazardous) violations per 100 apartments compared with the citywide rate, buildings in the city's Alternative Enforcement Program for the worst-maintained buildings, and their worst buildings. | `bin` (string, required): 7-digit BIN from lookup_building |
-| `get_tenant_history` | Summarize what has happened to tenants in a building: executed residential evictions by year, the owner's annual bedbug reports, HPD housing court cases (tenant repair actions, harassment, heat, false repair certifications, court-appointed 7A administrators), harassment findings, and vacate orders that forced tenants out. | `bbl` (string, required): 10-digit BBL from lookup_building<br>`years` (integer, optional, 1–20): How far back to count evictions and court cases. Harassment findings and 7A administrators are reported from any year. Default 5. |
-<!-- tools:end -->
 
 ## Contributing
 
