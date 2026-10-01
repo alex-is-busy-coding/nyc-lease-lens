@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from nyc_lease_lens.agent.loop import Agent
 from nyc_lease_lens.agent.sessions import SessionStore
 from nyc_lease_lens.api.schemas import ChatRequest, ChatResponse, Source
+from nyc_lease_lens.observability.context import request_id
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 # Without this, browsers may reuse an old page for hours after a deploy. With it they still cache,
@@ -47,9 +48,11 @@ def chat(body: ChatRequest, agent: AgentDep, sessions: SessionsDep) -> ChatRespo
 
     try:
         response, tool_calls = agent.run(messages)
-    except Exception as e:
+    except Exception:
+        # The details go to the logs only; error text can include internals such as project IDs.
         logger.exception("agent failed", extra={"session_id": session_id})
-        response, tool_calls = f"Model call failed: {type(e).__name__}: {str(e)[:300]}", []
+        response = f"Sorry, something went wrong on our side. Please try again. (Reference: {request_id.get()})"
+        tool_calls = []
 
     datasets = agent.tools.sources_for(call["name"] for call in tool_calls)
     sources = [Source(name=d.label, url=d.url, updated=d.refreshed) for d in datasets]

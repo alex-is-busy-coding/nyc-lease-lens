@@ -120,7 +120,9 @@ def test_agent_failures_become_a_message_not_a_500():
     with TestClient(create_app(Settings(), agent=FakeAgent(fail=True))) as http:
         response = http.post("/chat", json={"message": "hi"})
     assert response.status_code == 200
-    assert response.json()["response"] == "Model call failed: RuntimeError: model unavailable"
+    answer = response.json()["response"]
+    assert "model unavailable" not in answer and "RuntimeError" not in answer  # internals stay in the logs
+    assert response.headers["X-Request-ID"] in answer  # so a user's report can be matched to the logs
 
 
 @pytest.mark.parametrize(
