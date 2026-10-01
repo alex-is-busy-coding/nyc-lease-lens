@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -32,6 +35,33 @@ def agent():
 def http(agent):
     with TestClient(create_app(Settings(), agent=agent)) as client:  # `with` runs startup and shutdown
         yield client
+
+
+STATIC = Path(__file__).parent.parent / "src" / "nyc_lease_lens" / "static"
+
+
+def test_page_loads_its_stylesheet_and_script(http):
+    page = http.get("/").text
+    assert '<link rel="stylesheet" href="/static/app.css"' in page
+    assert '<script src="/static/app.js" defer></script>' in page
+    for asset, kind in [("app.css", "text/css"), ("app.js", "javascript")]:
+        response = http.get(f"/static/{asset}")
+        assert response.status_code == 200 and kind in response.headers["content-type"]
+
+
+def test_cdn_scripts_are_pinned_and_integrity_checked():
+    page = (STATIC / "index.html").read_text()
+    cdn_scripts = re.findall(r"<script\s+src=\"(https://[^\"]+)\"\s+integrity=\"(sha384-[^\"]+)\"", page)
+    assert {url.split("/npm/")[1].split("/")[0] for url, _ in cdn_scripts} == {"marked@18.0.14", "dompurify@3.4.16"}
+    assert page.count("<script") == 3  # the two libraries and app.js: no inline JavaScript
+
+
+def test_answers_only_reach_the_page_through_dompurify():
+    """Every innerHTML assignment in app.js must be the sanitized Markdown one."""
+    script = (STATIC / "app.js").read_text()
+    assignments = re.findall(r"\.innerHTML\s*=\s*([^;]+);", script)
+    assert assignments and all(a.strip().startswith("DOMPurify.sanitize(") for a in assignments)
+    assert '"img"' in script  # images in answers are forbidden
 
 
 def test_serves_the_chat_page_and_logo(http):

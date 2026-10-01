@@ -32,7 +32,7 @@ src/nyc_lease_lens/
   scoring/         red flags and good signs (red_flags.py), the rule types and how they're applied (engine.py)
   data/            Open Data client, dataset registry, SoQL and parsing helpers
   observability/   logging setup and the request-ID context
-  static/          the chat page and logo
+  static/          the chat page: index.html (layout, welcome text), app.css, app.js (no build step), logo
 scripts/           developer scripts (README table generator)
 .github/workflows  CI checks and README table updates
 ```
@@ -205,6 +205,16 @@ Good signs are listed separately in `GOOD_SIGNS`.
 - Pass `today=` to `score()` in tests, so the rules about recent years give the same result every time.
 
 Changing a weight changes grades users see, so mention the change and why in the commit message.
+
+## The chat page
+
+The page is plain HTML, CSS and JavaScript in `src/nyc_lease_lens/static/`, served by FastAPI. There's no build step.
+
+- **Never insert text as HTML.** Messages, errors and tool results go in with `textContent`. The only exception is the agent's Markdown answer, which `marked` turns into HTML and `DOMPurify` sanitizes, with images and forms removed. A test fails if `app.js` assigns `innerHTML` any other way.
+- **The grade card** comes from the structured `score_building_risk` result in the `/chat` response, not from the model's text, so it always shows the real grade and points.
+- **Libraries come from a CDN, pinned to an exact version with an `integrity` hash.** To upgrade one, change the version and replace the hash:
+  `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
+  If the CDN is unreachable, answers fall back to plain text.
 
 ## Logging
 
