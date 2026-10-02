@@ -11,6 +11,10 @@ An AI agent that checks any NYC apartment for red flags before you sign the leas
 
 The [live app](https://nyc-lease-lens.cloud.run/) runs on Google Cloud Run and redeploys on every push to `main`. Every question calls a paid model, so a Google sign-in limits access to Columbia accounts. Without one, you can run it yourself with the [Quickstart](#quickstart).
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Checking 157 Ludlow St: the agent grades it B and lists the red flags, good signs, sources and tool calls" width="720">
+</p>
+
 ## Try it
 
 These are also the example buttons on the welcome screen:
